@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="id" data-theme="emerald">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — CRUD Kota</title>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-base-200">
+  <div class="navbar bg-base-100 shadow-sm">
+    <div class="flex-1">
+      <a href="index.html" class="btn btn-ghost text-lg">🌙 Hisab DPUA</a>
+    </div>
+    <div class="flex-none gap-2">
+      <a href="hisab.html" class="btn btn-sm btn-ghost">Hisab</a>
+      <a href="history.html" class="btn btn-sm btn-ghost">Riwayat</a>
+      <span id="user-greet" class="text-sm text-base-content/70"></span>
+      <button type="button" onclick="logout()" class="btn btn-sm btn-ghost">Logout</button>
+    </div>
+  </div>
+
+  <main class="container mx-auto p-4 max-w-6xl">
+    <h1 class="text-2xl font-bold mb-1">Admin — Kelola Kota</h1>
+    <p class="text-sm text-base-content/70 mb-4">CRUD daftar kota. Centang <b>is_default</b> untuk masuk laporan multi-kota default.</p>
+
+    <div id="forbidden" class="hidden alert alert-error">
+      Hanya admin yang bisa akses halaman ini.
+    </div>
+
+    <div id="admin-content" class="hidden">
+      <!-- Pending users -->
+      <div class="card bg-base-100 shadow p-6 mb-6">
+        <h2 class="text-lg font-bold mb-3">User Menunggu Approval (<span id="pending-count">0</span>)</h2>
+        <div id="pending-empty" class="hidden text-sm text-base-content/60">Tidak ada user pending.</div>
+        <div class="overflow-x-auto">
+          <table class="table table-zebra table-sm" id="pending-table">
+            <thead>
+              <tr><th>Nama</th><th>Email</th><th>Daftar</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="pending-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- All users -->
+      <div class="card bg-base-100 shadow p-6 mb-6">
+        <h2 class="text-lg font-bold mb-3">Semua User (<span id="users-count">0</span>)</h2>
+        <div class="overflow-x-auto">
+          <table class="table table-zebra table-sm">
+            <thead>
+              <tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Daftar</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="users-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tambah kota -->
+      <div class="card bg-base-100 shadow p-6 mb-6">
+        <h2 class="text-lg font-bold mb-3">Tambah Kota</h2>
+        <form id="create-form" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input name="name" placeholder="Nama (mis. Surabaya)" class="input input-bordered input-sm" required>
+          <input name="country" placeholder="Negara" value="Indonesia" class="input input-bordered input-sm" required>
+          <input name="lat" type="number" step="any" placeholder="Lintang (lat)" class="input input-bordered input-sm" required>
+          <input name="lon" type="number" step="any" placeholder="Bujur (lon)" class="input input-bordered input-sm" required>
+          <input name="tz" type="number" step="any" placeholder="TZ (UTC offset)" value="7" class="input input-bordered input-sm" required>
+          <input name="order" type="number" placeholder="Urutan (1-99)" value="99" class="input input-bordered input-sm">
+          <label class="label cursor-pointer gap-2 md:col-span-2">
+            <input type="checkbox" name="is_default" class="checkbox checkbox-sm">
+            <span class="label-text">Masuk daftar default (16 kota)</span>
+          </label>
+          <button type="submit" class="btn btn-primary btn-sm">Tambah</button>
+          <p id="create-msg" class="text-sm md:col-span-3"></p>
+        </form>
+      </div>
+
+      <!-- Daftar kota -->
+      <div class="card bg-base-100 shadow p-6">
+        <h2 class="text-lg font-bold mb-3">Daftar Kota (<span id="cities-count">0</span>)</h2>
+        <div class="overflow-x-auto">
+          <table class="table table-zebra table-sm">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Nama</th>
+                <th>Negara</th>
+                <th>Lat</th>
+                <th>Lon</th>
+                <th>TZ</th>
+                <th>Default?</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="cities-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/app.js"></script>
+  <script src="assets/admin.js"></script>
+</body>
+</html>
