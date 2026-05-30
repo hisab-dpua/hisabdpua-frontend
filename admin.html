@@ -64,6 +64,7 @@
           <input name="lat" type="number" step="any" placeholder="Lintang (lat)" class="input input-bordered input-sm" required>
           <input name="lon" type="number" step="any" placeholder="Bujur (lon)" class="input input-bordered input-sm" required>
           <input name="tz" type="number" step="any" placeholder="TZ (UTC offset)" value="7" class="input input-bordered input-sm" required>
+          <input name="elevation" type="number" step="any" placeholder="Elevasi (mdpl)" value="0" min="0" class="input input-bordered input-sm">
           <input name="order" type="number" placeholder="Urutan (1-99)" value="99" class="input input-bordered input-sm">
           <label class="label cursor-pointer gap-2 md:col-span-2">
             <input type="checkbox" name="is_default" class="checkbox checkbox-sm">
@@ -87,6 +88,7 @@
                 <th>Lat</th>
                 <th>Lon</th>
                 <th>TZ</th>
+                <th>Elevasi</th>
                 <th>Default?</th>
                 <th>Aksi</th>
               </tr>
