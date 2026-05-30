@@ -1,0 +1,41 @@
+name: Deploy ke GitHub Pages
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Izin minimal untuk publish ke GitHub Pages via artifact.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Hanya satu deploy berjalan sekaligus; deploy baru menunggu yang lama selesai.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  Deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Situs statis disajikan dari root repo (hisab.html, assets/, dll).
+          path: .
+
+      - name: Deploy ke GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
