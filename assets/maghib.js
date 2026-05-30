@@ -4,10 +4,15 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   const status = $("#status");
+  const submitBtn = $("#submit-btn");
   let citiesCache = [];
-  let lastData = null; // simpan respons agar tab bisa render ulang tanpa fetch
+  let lastData = null;   // simpan respons agar tab bisa render ulang tanpa fetch
+  let activeTab = "literal";
 
-  // Greet + cek admin role + gate approval.
+  const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
+    "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
+
+  // Auth gate + navbar.
   try {
     const meRes = await fetchAPI("/me");
     if (meRes.ok) {
@@ -16,10 +21,13 @@
         window.location.href = "pending-approval.html";
         return;
       }
-      $("#user-greet").textContent = `👤 ${me.name}`;
-      if (me.role === "admin") $("#admin-link").classList.remove("hidden");
+      mountNav("maghib", me);
+    } else {
+      mountNav("maghib", null);
     }
-  } catch {}
+  } catch {
+    mountNav("maghib", null);
+  }
 
   // Load kota.
   try {
@@ -37,7 +45,7 @@
     wrap.innerHTML = "";
     for (const c of citiesCache) {
       const label = document.createElement("label");
-      label.className = "label cursor-pointer justify-start gap-2";
+      label.className = "label cursor-pointer justify-start gap-2 py-1";
       label.innerHTML = `
         <input type="checkbox" class="checkbox checkbox-sm city-cb" value="${c.id}" ${c.is_default ? "checked" : ""}>
         <span class="label-text text-sm">${c.name}${c.is_default ? " ⭐" : ""}</span>`;
@@ -54,7 +62,8 @@
 
   $("#maghib-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    status.textContent = "Menghitung…";
+    status.textContent = "";
+    setLoading(submitBtn, true);
     const form = new FormData(e.target);
     const cityIDs = $$(".city-cb:checked").map(cb => cb.value);
     const allDefault = cityIDs.length === 16 && cityIDs.every(id => citiesCache.find(c => c.id === id)?.is_default);
@@ -76,13 +85,13 @@
       status.textContent = `${data.literal.length} kota dihitung.`;
     } catch (err) {
       status.textContent = `Error: ${err.message}`;
+    } finally {
+      setLoading(submitBtn, false);
     }
   });
 
-  const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
-    "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
-
   function renderHeader(d) {
+    $("#empty-state").classList.add("hidden");
     $("#result").classList.remove("hidden");
     $("#result-title").textContent = `Awal ${monthIDN[d.month]} ${d.year} H — ${d.method_label}`;
     $("#result-ijtima").textContent = `Ijtima': ${d.ijtima_info}`;
@@ -95,6 +104,7 @@
   // Dipakai oleh atribut onclick di HTML.
   window.mgShowTab = function (which) {
     if (!lastData) return;
+    activeTab = which;
     $("#tab-literal").classList.toggle("tab-active", which === "literal");
     $("#tab-continuity").classList.toggle("tab-active", which === "continuity");
     const rows = which === "continuity" ? lastData.continuity : lastData.literal;
@@ -113,5 +123,18 @@
         <td class="text-xs">${r.position}</td>`;
       tbody.appendChild(tr);
     }
+  };
+
+  $("#export-csv").onclick = () => {
+    if (!lastData) return;
+    const d = lastData;
+    const rows = activeTab === "continuity" ? d.continuity : d.literal;
+    const header = ["NO", "Kota", "Negara", "Bujur", "Ijtima", "Irtifa hilal", "Mukuts", "Nur hilal", "Posisi"];
+    const data = rows.map(r => [
+      r.no, r.city_name, r.country || "", r.lon, r.ijtima, r.irtifa, r.mukuts, r.nur_hilal, r.position,
+    ]);
+    const variant = activeTab === "continuity" ? "kontinuitas" : "literal";
+    const fname = `maghib_${variant}_${monthIDN[d.month]}-${d.year}H.csv`;
+    downloadCSV(fname, header, data);
   };
 })();

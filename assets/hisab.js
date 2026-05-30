@@ -4,16 +4,22 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   const status = $("#status");
+  const submitBtn = $("#submit-btn");
   let citiesCache = [];
+  let lastData = null;
+
+  const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
+    "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
 
   // Preselect metode dari query (?method=im|aniq) — dipakai kartu di index.html.
+  const methodSel = document.querySelector('select[name="method"]');
   const urlMethod = new URLSearchParams(location.search).get("method");
-  if (urlMethod) {
-    const sel = document.querySelector('select[name="method"]');
-    if (sel && [...sel.options].some(o => o.value === urlMethod)) sel.value = urlMethod;
+  if (urlMethod && methodSel && [...methodSel.options].some(o => o.value === urlMethod)) {
+    methodSel.value = urlMethod;
   }
+  const activeMethod = (methodSel && methodSel.value) || "im"; // untuk active-state navbar
 
-  // Greet + cek admin role + gate approval.
+  // Auth gate + navbar.
   try {
     const meRes = await fetchAPI("/me");
     if (meRes.ok) {
@@ -22,10 +28,23 @@
         window.location.href = "pending-approval.html";
         return;
       }
-      $("#user-greet").textContent = `👤 ${me.name}`;
-      if (me.role === "admin") $("#admin-link").classList.remove("hidden");
+      mountNav(activeMethod, me);
+    } else {
+      mountNav(activeMethod, null);
     }
-  } catch {}
+  } catch {
+    mountNav(activeMethod, null);
+  }
+
+  // Saat metode diganti via dropdown, perbarui active-state di navbar.
+  if (methodSel) {
+    methodSel.addEventListener("change", () => {
+      document.querySelectorAll("#app-nav a, .navbar a").forEach((a) => {
+        if (a.getAttribute("href") === `hisab.html?method=${methodSel.value}`) a.classList.add("btn-active");
+        else if (a.getAttribute("href") && a.getAttribute("href").startsWith("hisab.html?method=")) a.classList.remove("btn-active");
+      });
+    });
+  }
 
   // Load kota.
   try {
@@ -43,7 +62,7 @@
     wrap.innerHTML = "";
     for (const c of citiesCache) {
       const label = document.createElement("label");
-      label.className = "label cursor-pointer justify-start gap-2";
+      label.className = "label cursor-pointer justify-start gap-2 py-1";
       label.innerHTML = `
         <input type="checkbox" class="checkbox checkbox-sm city-cb" value="${c.id}" ${c.is_default ? "checked" : ""}>
         <span class="label-text text-sm">${c.name}${c.is_default ? " ⭐" : ""}</span>
@@ -61,7 +80,8 @@
 
   $("#hisab-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    status.textContent = "Menghitung…";
+    status.textContent = "";
+    setLoading(submitBtn, true);
     const form = new FormData(e.target);
     const cityIDs = $$(".city-cb:checked").map(cb => cb.value);
     const body = {
@@ -83,20 +103,23 @@
         status.textContent = `Error: ${data.error || res.statusText}`;
         return;
       }
+      lastData = data;
       renderReport(data);
-      status.textContent = `${data.rows.length} kota dihitung.`;
+      const visible = data.rows.filter(r => r.visible).length;
+      status.textContent = `${data.rows.length} kota · ${visible} terlihat.`;
     } catch (err) {
       status.textContent = `Error: ${err.message}`;
+    } finally {
+      setLoading(submitBtn, false);
     }
   });
 
   function renderReport(d) {
+    $("#empty-state").classList.add("hidden");
     $("#result").classList.remove("hidden");
-    const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
-      "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
 
     $("#result-title").textContent =
-      `Awal ${monthIDN[d.month]} ${d.year} H — Metode ${d.method_label}`;
+      `Awal ${monthIDN[d.month]} ${d.year} H — ${d.method_label}`;
     $("#result-ijtima").textContent = `Ijtima': ${d.ijtima_info}`;
     $("#th-day0").textContent = `Irtifa ${d.date_rukyat}`;
     $("#th-day1").textContent = `Irtifa ${d.date_plus1}`;
@@ -105,6 +128,7 @@
     tbody.innerHTML = "";
     d.rows.forEach((r, i) => {
       const tr = document.createElement("tr");
+      tr.className = r.visible ? "row-visible" : "row-hidden";
       tr.innerHTML = `
         <td>${i + 1}</td>
         <td>${r.city_name}${r.country && r.country !== "Indonesia" ? ` <span class="badge badge-xs">${r.country}</span>` : ""}</td>
@@ -121,4 +145,17 @@
 
     $("#result-json").textContent = JSON.stringify(d, null, 2);
   }
+
+  $("#export-csv").onclick = () => {
+    if (!lastData) return;
+    const d = lastData;
+    const header = ["NO", "Kota", "Negara", "Ghurub asy-Syams", "Ghurub al-Qomar",
+      "Ijtima (LT)", `Irtifa ${d.date_rukyat}`, "Elongasi", `Irtifa ${d.date_plus1}`, "Terlihat"];
+    const rows = d.rows.map((r, i) => [
+      i + 1, r.city_name, r.country || "", r.sunset, r.moonset, r.ijtima_local,
+      r.altitude_center, r.elongation, r.altitude_plus1, r.visible ? "Ya" : "Tidak",
+    ]);
+    const fname = `hisab_${d.method}_${monthIDN[d.month]}-${d.year}H.csv`;
+    downloadCSV(fname, header, rows);
+  };
 })();
