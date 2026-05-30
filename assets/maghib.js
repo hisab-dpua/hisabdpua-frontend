@@ -48,7 +48,7 @@
       label.className = "label cursor-pointer justify-start gap-2 py-1";
       label.innerHTML = `
         <input type="checkbox" class="checkbox checkbox-sm city-cb" value="${c.id}" ${c.is_default ? "checked" : ""}>
-        <span class="label-text text-sm">${c.name}${c.is_default ? " ⭐" : ""}</span>`;
+        <span class="label-text text-sm">${c.name}${c.is_default ? " " + window.icons.star : ""}</span>`;
       wrap.appendChild(label);
     }
   }

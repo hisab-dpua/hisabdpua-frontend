@@ -99,7 +99,7 @@
       try {
         const res = await fetchAPI(`/api/admin/cities/${id}`, { method: "PATCH", body: JSON.stringify(body) });
         if (!res.ok) { const e = await res.json(); alert(`Gagal: ${e.error}`); return; }
-        ev.target.textContent = "✓";
+        ev.target.textContent = "Tersimpan";
         setTimeout(() => ev.target.textContent = "Simpan", 1500);
       } catch (err) { alert(`Error: ${err.message}`); }
     } else if (action === "delete") {

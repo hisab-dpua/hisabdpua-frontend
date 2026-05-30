@@ -65,7 +65,7 @@
       label.className = "label cursor-pointer justify-start gap-2 py-1";
       label.innerHTML = `
         <input type="checkbox" class="checkbox checkbox-sm city-cb" value="${c.id}" ${c.is_default ? "checked" : ""}>
-        <span class="label-text text-sm">${c.name}${c.is_default ? " ⭐" : ""}</span>
+        <span class="label-text text-sm">${c.name}${c.is_default ? " " + window.icons.star : ""}</span>
       `;
       wrap.appendChild(label);
     }
@@ -138,7 +138,7 @@
         <td class="font-mono text-xs">${r.altitude_center}</td>
         <td class="font-mono text-xs">${r.elongation}</td>
         <td class="font-mono text-xs">${r.altitude_plus1}</td>
-        <td>${r.visible ? '<span class="badge badge-success badge-sm">✓</span>' : '<span class="badge badge-warning badge-sm">×</span>'}</td>
+        <td>${r.visible ? `<span class="badge badge-success badge-sm gap-1">${window.icons.check}</span>` : `<span class="badge badge-ghost badge-sm gap-1">${window.icons.x}</span>`}</td>
       `;
       tbody.appendChild(tr);
     });
