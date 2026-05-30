@@ -17,21 +17,37 @@
     </div>
   </div>
 
-  <main class="hero py-16">
-    <div class="hero-content text-center max-w-2xl">
+  <main class="hero py-12">
+    <div class="hero-content text-center max-w-3xl">
       <div>
         <h1 class="text-4xl font-bold">Hisab Awal Bulan Kamariah</h1>
         <p class="py-6 text-base-content/80">
-          Dua metode dalam satu tampilan: <b>Irsyadul Murid</b> (tahqīqi kontemporer, rumus Meeus) berdampingan dengan
-          <b>Ad-Durr Al-Anīq</b> (tahqīqi-tabel KH. Ahmad Ghozali). Input bulan/tahun Hijriah + lokasi → output ijtima, ghurub, irtifa, elongasi.
+          Mempercepat perhitungan awal bulan sesuai kaidah masing-masing kitab. Pilih metode, masukkan
+          bulan/tahun Hijriah → aplikasi menyajikan hasil untuk 16 kota.
         </p>
-        <a href="hisab.html" class="btn btn-primary">Hitung Sekarang →</a>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 text-left">
+          <a href="hisab.html?method=im" class="card bg-base-100 shadow hover:shadow-lg transition p-5">
+            <h3 class="font-bold">Irsyadul Murid</h3>
+            <p class="text-xs text-base-content/60 mt-1">Tahqīqi kontemporer — rumus Meeus.</p>
+          </a>
+          <a href="hisab.html?method=aniq" class="card bg-base-100 shadow hover:shadow-lg transition p-5">
+            <h3 class="font-bold">Ad-Durr al-Anīq</h3>
+            <p class="text-xs text-base-content/60 mt-1">Tahqīqi-tabel — KH. Ahmad Ghozali.</p>
+          </a>
+          <a href="maghib.html" class="card bg-base-100 shadow hover:shadow-lg transition p-5">
+            <h3 class="font-bold">Maghīb al-Qamarain</h3>
+            <p class="text-xs text-base-content/60 mt-1">Hibrida (Meeus + tabel + taqrībi) — kitab Ami Magib.</p>
+          </a>
+        </div>
+
+        <a href="hisab.html" class="btn btn-primary mt-8">Hitung Sekarang →</a>
       </div>
     </div>
   </main>
 
   <footer class="footer footer-center p-4 bg-base-300 text-base-content text-sm">
-    <aside>Engine port Go dari hisab-engine.js / Activity.java (Aniq) + rumus Meeus (IM).</aside>
+    <aside>Engine port Go: Meeus (IM), engine.js/Activity.java (Aniq), Excel Ami Magib (Maghīb al-Qamarain).</aside>
   </footer>
 </body>
 </html>

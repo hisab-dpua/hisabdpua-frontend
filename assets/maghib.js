@@ -1,17 +1,11 @@
-// hisab.js — laporan multi-kota, satu metode.
+// maghib.js — laporan 16 kota metode Maghīb al-Qamarain (dua varian).
 
 (async function () {
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   const status = $("#status");
   let citiesCache = [];
-
-  // Preselect metode dari query (?method=im|aniq) — dipakai kartu di index.html.
-  const urlMethod = new URLSearchParams(location.search).get("method");
-  if (urlMethod) {
-    const sel = document.querySelector('select[name="method"]');
-    if (sel && [...sel.options].some(o => o.value === urlMethod)) sel.value = urlMethod;
-  }
+  let lastData = null; // simpan respons agar tab bisa render ulang tanpa fetch
 
   // Greet + cek admin role + gate approval.
   try {
@@ -46,8 +40,7 @@
       label.className = "label cursor-pointer justify-start gap-2";
       label.innerHTML = `
         <input type="checkbox" class="checkbox checkbox-sm city-cb" value="${c.id}" ${c.is_default ? "checked" : ""}>
-        <span class="label-text text-sm">${c.name}${c.is_default ? " ⭐" : ""}</span>
-      `;
+        <span class="label-text text-sm">${c.name}${c.is_default ? " ⭐" : ""}</span>`;
       wrap.appendChild(label);
     }
   }
@@ -59,67 +52,66 @@
   $("#select-all").onclick = () => $$(".city-cb").forEach(cb => cb.checked = true);
   $("#select-none").onclick = () => $$(".city-cb").forEach(cb => cb.checked = false);
 
-  $("#hisab-form").addEventListener("submit", async (e) => {
+  $("#maghib-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     status.textContent = "Menghitung…";
     const form = new FormData(e.target);
     const cityIDs = $$(".city-cb:checked").map(cb => cb.value);
+    const allDefault = cityIDs.length === 16 && cityIDs.every(id => citiesCache.find(c => c.id === id)?.is_default);
     const body = {
-      method: form.get("method"),
       month: parseInt(form.get("month"), 10),
       year: parseInt(form.get("year"), 10),
-      elevation: parseFloat(form.get("elevation") || "0"),
-      city_ids: cityIDs.length === 16 && cityIDs.every(id => citiesCache.find(c => c.id === id)?.is_default)
-        ? [] // semua default → kirim kosong agar pakai default server-side
-        : cityIDs,
+      city_ids: allDefault ? [] : cityIDs,
     };
-
     try {
-      const res = await fetchAPI("/api/hisab/report", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      const res = await fetchAPI("/api/hisab/maghib", { method: "POST", body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) {
         status.textContent = `Error: ${data.error || res.statusText}`;
         return;
       }
-      renderReport(data);
-      status.textContent = `${data.rows.length} kota dihitung.`;
+      lastData = data;
+      renderHeader(data);
+      mgShowTab("literal");
+      status.textContent = `${data.literal.length} kota dihitung.`;
     } catch (err) {
       status.textContent = `Error: ${err.message}`;
     }
   });
 
-  function renderReport(d) {
+  const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
+    "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
+
+  function renderHeader(d) {
     $("#result").classList.remove("hidden");
-    const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
-      "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
-
-    $("#result-title").textContent =
-      `Awal ${monthIDN[d.month]} ${d.year} H — Metode ${d.method_label}`;
+    $("#result-title").textContent = `Awal ${monthIDN[d.month]} ${d.year} H — ${d.method_label}`;
     $("#result-ijtima").textContent = `Ijtima': ${d.ijtima_info}`;
-    $("#th-day0").textContent = `Irtifa ${d.date_rukyat}`;
-    $("#th-day1").textContent = `Irtifa ${d.date_plus1}`;
-
-    const tbody = $("#result-body");
-    tbody.innerHTML = "";
-    d.rows.forEach((r, i) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${i + 1}</td>
-        <td>${r.city_name}${r.country && r.country !== "Indonesia" ? ` <span class="badge badge-xs">${r.country}</span>` : ""}</td>
-        <td class="font-mono text-xs">${r.sunset}</td>
-        <td class="font-mono text-xs">${r.moonset}</td>
-        <td class="font-mono text-xs">${r.ijtima_local}</td>
-        <td class="font-mono text-xs">${r.altitude_center}</td>
-        <td class="font-mono text-xs">${r.elongation}</td>
-        <td class="font-mono text-xs">${r.altitude_plus1}</td>
-        <td>${r.visible ? '<span class="badge badge-success badge-sm">✓</span>' : '<span class="badge badge-warning badge-sm">×</span>'}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
+    $("#result-awal").innerHTML = `Awal bulan: <b>${d.awal_bulan}</b>` +
+      (d.istikmal ? ` <span class="badge badge-warning badge-sm">istikmal</span>` : "");
+    $("#result-note").textContent = d.note || "";
     $("#result-json").textContent = JSON.stringify(d, null, 2);
   }
+
+  // Dipakai oleh atribut onclick di HTML.
+  window.mgShowTab = function (which) {
+    if (!lastData) return;
+    $("#tab-literal").classList.toggle("tab-active", which === "literal");
+    $("#tab-continuity").classList.toggle("tab-active", which === "continuity");
+    const rows = which === "continuity" ? lastData.continuity : lastData.literal;
+    const tbody = $("#result-body");
+    tbody.innerHTML = "";
+    for (const r of rows) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.no}</td>
+        <td>${r.city_name}${r.country && r.country !== "Indonesia" ? ` <span class="badge badge-xs">${r.country}</span>` : ""}</td>
+        <td class="font-mono text-xs">${r.lon}</td>
+        <td class="font-mono text-xs">${r.ijtima}</td>
+        <td class="font-mono text-xs">${r.irtifa}</td>
+        <td class="font-mono text-xs">${r.mukuts}</td>
+        <td class="font-mono text-xs">${r.nur_hilal}</td>
+        <td class="text-xs">${r.position}</td>`;
+      tbody.appendChild(tr);
+    }
+  };
 })();
