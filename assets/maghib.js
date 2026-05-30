@@ -120,7 +120,7 @@
         <td class="font-mono text-xs">${r.irtifa}</td>
         <td class="font-mono text-xs">${r.mukuts}</td>
         <td class="font-mono text-xs">${r.nur_hilal}</td>
-        <td class="text-xs">${r.position}</td>`;
+        <td class="text-xs whitespace-normal min-w-[9rem]">${r.position}</td>`;
       tbody.appendChild(tr);
     }
   };
