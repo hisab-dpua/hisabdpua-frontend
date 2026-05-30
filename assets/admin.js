@@ -33,6 +33,7 @@
       lat: parseFloat(form.get("lat")),
       lon: parseFloat(form.get("lon")),
       tz: parseFloat(form.get("tz")),
+      elevation: parseFloat(form.get("elevation") || "0"),
       order: parseInt(form.get("order") || "99", 10),
       is_default: form.get("is_default") === "on",
     };
@@ -71,6 +72,7 @@
       <td><input class="input input-bordered input-xs w-24" data-field="lat" type="number" step="any" value="${c.lat}"></td>
       <td><input class="input input-bordered input-xs w-24" data-field="lon" type="number" step="any" value="${c.lon}"></td>
       <td><input class="input input-bordered input-xs w-16" data-field="tz" type="number" step="any" value="${c.tz}"></td>
+      <td><input class="input input-bordered input-xs w-20" data-field="elevation" type="number" step="any" value="${c.elevation ?? 0}"></td>
       <td><input type="checkbox" class="checkbox checkbox-xs" data-field="is_default" ${c.is_default ? "checked" : ""}></td>
       <td class="flex gap-1">
         <button class="btn btn-success btn-xs" data-action="save">Simpan</button>
@@ -90,6 +92,7 @@
         lat: parseFloat(tr.querySelector('[data-field="lat"]').value),
         lon: parseFloat(tr.querySelector('[data-field="lon"]').value),
         tz: parseFloat(tr.querySelector('[data-field="tz"]').value),
+        elevation: parseFloat(tr.querySelector('[data-field="elevation"]').value || "0"),
         order: parseInt(tr.querySelector('[data-field="order"]').value, 10),
         is_default: tr.querySelector('[data-field="is_default"]').checked,
       };

@@ -68,7 +68,6 @@
       method: form.get("method"),
       month: parseInt(form.get("month"), 10),
       year: parseInt(form.get("year"), 10),
-      elevation: parseFloat(form.get("elevation") || "0"),
       city_ids: cityIDs.length === 16 && cityIDs.every(id => citiesCache.find(c => c.id === id)?.is_default)
         ? [] // semua default → kirim kosong agar pakai default server-side
         : cityIDs,
