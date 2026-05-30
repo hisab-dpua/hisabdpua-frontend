@@ -15,9 +15,7 @@ Aplikasi web **Hisab Awal Bulan Kamariah** — menghitung dan menyajikan laporan
 ## Fitur
 
 - **Laporan multi-kota** untuk satu metode dalam satu tabel
-- **Bandingkan 2 metode** berdampingan untuk satu kota
 - **Laporan Maghīb al-Qamarain** (tabel harfiah & koreksi kontinuitas)
-- **Riwayat** hisab tersimpan per pengguna
 - **Panel admin**: persetujuan pengguna baru + kelola data kota
 
 ## Cara akses
