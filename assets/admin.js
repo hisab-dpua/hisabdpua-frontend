@@ -11,7 +11,7 @@
       return;
     }
     const me = await meRes.json();
-    $("#user-greet").textContent = `👤 ${me.name}`;
+    mountNav("admin", me);
     if (me.role !== "admin") {
       $("#forbidden").classList.remove("hidden");
       return;
