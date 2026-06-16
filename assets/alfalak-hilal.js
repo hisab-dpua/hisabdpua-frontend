@@ -15,24 +15,26 @@
   const resultsEl = document.getElementById("results");
   let lastData = null; // simpan untuk export
 
-  // ===== Pemilih kota dari locations.json (52 negara, ratusan kota) =====
-  const cityMap = {}; // "Nama — Negara" → {name,country,lat,lon,tz,elev}
+  // ===== Pemilih kota dari database (GET /api/cities) — bisa di-CRUD admin =====
+  const cityMap = {}; // "Nama — Negara" → {name,country,lat,lon,tz,elevation}
   (async function loadCities() {
     try {
-      const res = await fetch("assets/locations.json");
+      // Kota dari database (koleksi cities) via backend — bisa di-CRUD admin.
+      const res = await fetch(window.API_BASE + "/api/cities");
       if (!res.ok) return;
       const data = await res.json();
       const dl = document.getElementById("city-list");
       const frag = document.createDocumentFragment();
-      data.forEach((c) => (c.cities || []).forEach((city) => {
-        const key = `${city.name} — ${c.country}`;
-        cityMap[key] = { ...city, country: c.country };
+      (data.cities || []).forEach((city) => {
+        const country = city.country || "";
+        const key = country ? `${city.name} — ${country}` : city.name;
+        cityMap[key] = city;
         const opt = document.createElement("option");
         opt.value = key;
         frag.appendChild(opt);
-      }));
+      });
       dl.appendChild(frag);
-    } catch (_) { /* offline: form manual tetap jalan */ }
+    } catch (_) { /* offline / backend mati: form manual tetap jalan */ }
   })();
 
   const citySearch = document.getElementById("city-search");
@@ -40,11 +42,11 @@
     const c = cityMap[citySearch.value];
     if (!c) return;
     form.loc_name.value = c.name;
-    form.country.value = c.country;
+    form.country.value = c.country || "";
     form.latitude.value = c.lat;
     form.longitude.value = c.lon;
     form.timezone.value = c.tz;
-    form.elevation.value = c.elev;
+    form.elevation.value = c.elevation; // field DB: elevation (bukan elev)
   });
 
   // ===== Toggle kalender Masehi ↔ Hijriah =====
