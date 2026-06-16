@@ -1,7 +1,7 @@
 // alfalak-hilal.js — panggil /api/alfalak/hilal, tampilkan data LENGKAP:
 // ringkasan, visualisasi sabit, tabel ephemeris penuh (geo/topo), kriteria detail,
-// export TXT/CSV/print. Setara aplikasi desktop Al Falak. Halaman publik;
-// navbar di-mount graceful seperti maghib.
+// export TXT/CSV/print, pemilih kota, kalender Hijriah↔Masehi. Setara desktop.
+// Halaman publik; navbar di-mount graceful.
 (async function () {
   try {
     const meRes = await fetchAPI("/me");
@@ -14,6 +14,76 @@
   const statusEl = document.getElementById("status");
   const resultsEl = document.getElementById("results");
   let lastData = null; // simpan untuk export
+
+  // ===== Pemilih kota dari locations.json (52 negara, ratusan kota) =====
+  const cityMap = {}; // "Nama — Negara" → {name,country,lat,lon,tz,elev}
+  (async function loadCities() {
+    try {
+      const res = await fetch("assets/locations.json");
+      if (!res.ok) return;
+      const data = await res.json();
+      const dl = document.getElementById("city-list");
+      const frag = document.createDocumentFragment();
+      data.forEach((c) => (c.cities || []).forEach((city) => {
+        const key = `${city.name} — ${c.country}`;
+        cityMap[key] = { ...city, country: c.country };
+        const opt = document.createElement("option");
+        opt.value = key;
+        frag.appendChild(opt);
+      }));
+      dl.appendChild(frag);
+    } catch (_) { /* offline: form manual tetap jalan */ }
+  })();
+
+  const citySearch = document.getElementById("city-search");
+  if (citySearch) citySearch.addEventListener("change", () => {
+    const c = cityMap[citySearch.value];
+    if (!c) return;
+    form.loc_name.value = c.name;
+    form.country.value = c.country;
+    form.latitude.value = c.lat;
+    form.longitude.value = c.lon;
+    form.timezone.value = c.tz;
+    form.elevation.value = c.elev;
+  });
+
+  // ===== Toggle kalender Masehi ↔ Hijriah =====
+  let calMode = "greg"; // greg | hijri
+  const HIJRI_MONTHS = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir",
+    "Jumadil Awal", "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal",
+    "Zulkaidah", "Zulhijah"];
+  const btnGreg = document.getElementById("cal-greg");
+  const btnHijri = document.getElementById("cal-hijri");
+  const calHint = document.getElementById("cal-hint");
+
+  async function convertDate(direction, y, m, d) {
+    const res = await fetch(window.API_BASE + "/api/alfalak/convert", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ direction, year: y, month: m, day: d }),
+    });
+    if (!res.ok) throw new Error("convert failed");
+    return res.json();
+  }
+
+  if (btnGreg) btnGreg.addEventListener("click", async () => {
+    if (calMode === "greg") return;
+    // konversi Hijri → Masehi sebelum pindah mode
+    try {
+      const r = await convertDate("h2g", +form.year.value, +form.month.value, +form.day.value);
+      form.year.value = r.gregorian.year; form.month.value = r.gregorian.month; form.day.value = r.gregorian.day;
+    } catch (_) {}
+    calMode = "greg"; btnGreg.classList.add("btn-active"); btnHijri.classList.remove("btn-active");
+    calHint.textContent = "";
+  });
+  if (btnHijri) btnHijri.addEventListener("click", async () => {
+    if (calMode === "hijri") return;
+    try {
+      const r = await convertDate("g2h", +form.year.value, +form.month.value, +form.day.value);
+      form.year.value = r.hijri.year; form.month.value = r.hijri.month; form.day.value = r.hijri.day;
+      calHint.textContent = `${r.hijri.day} ${HIJRI_MONTHS[r.hijri.month]} ${r.hijri.year} H`;
+    } catch (_) { calHint.textContent = "(konversi butuh backend)"; }
+    calMode = "hijri"; btnHijri.classList.add("btn-active"); btnGreg.classList.remove("btn-active");
+  });
 
   // ---------- format helper ----------
   function setStatus(kind, msg) {
@@ -206,10 +276,18 @@
     resultsEl.classList.add("hidden");
     setStatus("info", "Menghitung…");
     const fd = new FormData(form);
+    let y = parseInt(fd.get("year"), 10), m = parseInt(fd.get("month"), 10), d = parseFloat(fd.get("day"));
+    // Engine pakai tanggal Masehi; jika input Hijriah, konversi dulu.
+    if (calMode === "hijri") {
+      try {
+        const r = await convertDate("h2g", y, m, Math.round(d));
+        y = r.gregorian.year; m = r.gregorian.month; d = r.gregorian.day;
+      } catch (_) { setStatus("error", "Gagal konversi tanggal Hijriah"); return; }
+    }
     const body = {
       latitude: parseFloat(fd.get("latitude")), longitude: parseFloat(fd.get("longitude")),
       elevation: parseFloat(fd.get("elevation")), timezone: parseFloat(fd.get("timezone")),
-      year: parseInt(fd.get("year"), 10), month: parseInt(fd.get("month"), 10), day: parseFloat(fd.get("day")),
+      year: y, month: m, day: d,
     };
     try {
       const res = await fetch(window.API_BASE + "/api/alfalak/hilal", {
