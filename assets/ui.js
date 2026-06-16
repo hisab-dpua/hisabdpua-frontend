@@ -23,7 +23,9 @@ window.mountNav = function (active, me) {
   const methods =
     link("im", "hisab.html?method=im", "Irsyadul Murid") +
     link("aniq", "hisab.html?method=aniq", "Ad-Durr al-Anīq") +
-    link("maghib", "maghib.html", "Maghīb al-Qamarain");
+    link("maghib", "maghib.html", "Maghīb al-Qamarain") +
+    link("alfalak", "alfalak-hilal.html", "Al Falak") +
+    link("alfalak-map", "alfalak-map.html", "Peta Hilal");
   const adminLink = me && me.role === "admin" ? link("admin", "admin.html", "Admin") : "";
   const greet = me ? `<span class="text-sm text-base-content/70 hidden sm:inline-flex items-center gap-1">${window.icons.user}${me.name}</span>` : "";
   root.outerHTML = `
