@@ -1,5 +1,7 @@
-// alfalak-hilal.js — panggil /api/alfalak/hilal, tampilkan ephemeris + kriteria.
-// Halaman publik (endpoint tanpa auth); navbar di-mount graceful seperti maghib.
+// alfalak-hilal.js — panggil /api/alfalak/hilal, tampilkan data LENGKAP:
+// ringkasan, visualisasi sabit, tabel ephemeris penuh (geo/topo), kriteria detail,
+// export TXT/CSV/print. Setara aplikasi desktop Al Falak. Halaman publik;
+// navbar di-mount graceful seperti maghib.
 (async function () {
   try {
     const meRes = await fetchAPI("/me");
@@ -10,116 +12,218 @@
 
   const form = document.getElementById("alfalak-hilal-form");
   const statusEl = document.getElementById("status");
-  const ephCard = document.getElementById("ephemeris");
-  const ephGrid = document.getElementById("ephemeris-grid");
-  const critCard = document.getElementById("criteria");
-  const critRows = document.getElementById("criteria-rows");
+  const resultsEl = document.getElementById("results");
+  let lastData = null; // simpan untuk export
 
+  // ---------- format helper ----------
   function setStatus(kind, msg) {
     statusEl.className = "alert alert-" + kind;
     statusEl.textContent = msg;
     statusEl.classList.remove("hidden");
   }
-  function clearStatus() {
-    statusEl.classList.add("hidden");
-  }
+  const clearStatus = () => statusEl.classList.add("hidden");
 
-  function fmtDeg(v) {
+  function dms(v) {
     if (v == null || isNaN(v)) return "—";
-    return Number(v).toFixed(4) + "°";
+    const neg = v < 0; v = Math.abs(v);
+    const d = Math.floor(v), m = Math.floor((v - d) * 60), s = Math.round(((v - d) * 60 - m) * 60);
+    return (neg ? "-" : "") + d + "° " + String(m).padStart(2, "0") + "' " + String(s).padStart(2, "0") + '"';
   }
-  function fmtHM(h) {
-    if (h == null || isNaN(h)) return "—";
-    let neg = h < 0;
-    h = Math.abs(h);
-    const hh = Math.floor(h);
-    const mm = Math.floor((h - hh) * 60);
-    const ss = Math.round(((h - hh) * 60 - mm) * 60);
-    return (neg ? "-" : "") + String(hh).padStart(2, "0") + ":" +
-      String(mm).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+  function hms(v) { // jam desimal → HH:MM:SS
+    if (v == null || isNaN(v)) return "—";
+    const neg = v < 0; v = Math.abs(v);
+    const h = Math.floor(v), m = Math.floor((v - h) * 60), s = Math.round(((v - h) * 60 - m) * 60);
+    return (neg ? "-" : "") + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
   }
+  function ra2hms(deg) { // RA derajat → jam-menit-detik
+    if (deg == null || isNaN(deg)) return "—";
+    let h = deg / 15; const hh = Math.floor(h), mm = Math.floor((h - hh) * 60), ss = Math.round(((h - hh) * 60 - mm) * 60);
+    return String(hh).padStart(2, "0") + "h " + String(mm).padStart(2, "0") + "m " + String(ss).padStart(2, "0") + "s";
+  }
+  const num = (v, d = 3) => (v == null || isNaN(v)) ? "—" : Number(v).toFixed(d);
 
-  const EPH_LABELS = [
-    ["sunset_local", "Matahari terbenam", fmtHM],
-    ["moonset_local", "Bulan terbenam", fmtHM],
-    ["lag_time_hours", "Lag time", fmtHM],
-    ["moon_age_hours", "Umur bulan", fmtHM],
-    ["moon_altitude_topo", "Tinggi bulan (topo)", fmtDeg],
-    ["moon_elongation_topo", "Elongasi (topo)", fmtDeg],
-    ["crescent_width_arcmin", "Lebar sabit (')", (v) => Number(v).toFixed(3) + "'"],
-    ["illumination_percent", "Iluminasi", (v) => Number(v).toFixed(3) + "%"],
-  ];
-
-  function renderEphemeris(eph) {
-    ephGrid.innerHTML = "";
-    for (const [key, label, fmt] of EPH_LABELS) {
-      const div = document.createElement("div");
-      div.className = "flex flex-col border rounded p-2 bg-base-200/40";
-      div.innerHTML =
-        '<span class="text-base-content/60">' + label + "</span>" +
-        '<span class="font-mono font-semibold">' + fmt(eph[key]) + "</span>";
-      ephGrid.appendChild(div);
-    }
-    ephCard.classList.remove("hidden");
+  // ---------- ringkasan ----------
+  function renderSummary(e) {
+    const items = [
+      ["Matahari terbenam", hms(e.sunset_local) + " WD"],
+      ["Bulan terbenam", hms(e.moonset_local) + " WD"],
+      ["Lag time", hms(e.lag_time)],
+      ["Umur bulan", hms(e.moon_age_hours)],
+      ["Tinggi bulan (topo)", dms(e.moon_altitude.topo)],
+      ["Elongasi (topo)", dms(e.elongation.topo)],
+      ["Lebar sabit", num(e.crescent_width_arcmin, 3) + "'"],
+      ["Iluminasi", num(e.illumination_pct, 3) + "%"],
+      ["Delta T", num(e.delta_t, 2) + " dtk"],
+    ];
+    document.getElementById("summary-grid").innerHTML = items.map(([k, v]) =>
+      `<div class="flex flex-col border rounded p-2 bg-base-200/40"><span class="text-base-content/60">${k}</span><span class="font-mono font-semibold">${v}</span></div>`).join("");
   }
 
-  function renderCriteria(criteria) {
-    critRows.innerHTML = "";
-    // Urutan tampil yang masuk akal.
-    const order = ["MABIMS", "WujudulHilal", "Odeh", "Yallop", "Turkey",
-      "IjtimaQoblaGhurub", "KHGT"];
-    const keys = Object.keys(criteria).sort((a, b) => {
-      const ia = order.indexOf(a), ib = order.indexOf(b);
-      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-    });
-    for (const k of keys) {
-      const c = criteria[k];
-      const tr = document.createElement("tr");
-      const badge = c.is_visible
-        ? '<span class="badge badge-success badge-sm">Terlihat</span>'
-        : '<span class="badge badge-ghost badge-sm">Tidak terlihat</span>';
-      tr.innerHTML =
-        "<td class='font-medium'>" + c.criteria_name + "</td>" +
-        "<td>" + badge + "</td>" +
-        "<td class='text-xs text-base-content/70'>" + (c.additional_info || "") + "</td>";
-      critRows.appendChild(tr);
-    }
-    critCard.classList.remove("hidden");
+  // ---------- visualisasi sabit (SVG) ----------
+  function renderMoon(e) {
+    const illum = Math.max(0, Math.min(1, (e.illumination_pct || 0) / 100));
+    // Terangi sisi sesuai elongasi; bentuk sabit pakai dua busur.
+    const R = 70, cx = 80, cy = 80;
+    // lebar bagian terang: k = illum (0=baru, 1=purnama). Sabit muda → tipis.
+    const x = (1 - 2 * illum) * R; // pusat busur terminator
+    const sweep = illum < 0.5 ? 0 : 1;
+    const dark = "#1f2937", light = "#fde68a";
+    const svg = `
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="${dark}" stroke="#374151"/>
+      <path d="M ${cx} ${cy - R} A ${R} ${R} 0 0 1 ${cx} ${cy + R} A ${Math.abs(x)} ${R} 0 0 ${sweep} ${cx} ${cy - R} Z" fill="${light}"/>
+    </svg>`;
+    document.getElementById("moon-viz").innerHTML = svg;
+    document.getElementById("moon-viz-caption").textContent =
+      `Iluminasi ${num(e.illumination_pct, 2)}% · umur ${hms(e.moon_age_hours)}`;
   }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // ---------- tabel ephemeris penuh ----------
+  function gt(row, fmt) { return [fmt(row.geo), fmt(row.topo)]; }
+  function renderEphemeris(e) {
+    // [label, geoStr, topoStr]; null geo/topo → kolom kosong (single value).
+    const rows = [];
+    const push = (label, geo, topo) => rows.push([label, geo ?? "", topo ?? ""]);
+    const pair = (label, obj, fmt) => { const [g, t] = gt(obj, fmt); push(label, g, t); };
+
+    push("Julian Date (JD)", num(e.jd, 6), "");
+    push("Delta T", num(e.delta_t, 2) + " dtk", "");
+    push("Konjungsi (Ijtima') JD", num(e.conjunction_jd, 6), "");
+    push("Jarak Matahari", num(e.sun_dist_km, 3) + " km", "");
+    push("Jarak Bulan", num(e.moon_dist_km, 3) + " km", "");
+    push("— Koordinat Ekliptika —", "", "");
+    pair("Bujur Matahari", e.sun_longitude, dms);
+    pair("Lintang Matahari", e.sun_latitude, dms);
+    pair("Bujur Bulan", e.moon_longitude, dms);
+    pair("Lintang Bulan", e.moon_latitude, dms);
+    push("— Koordinat Ekuator —", "", "");
+    pair("Deklinasi Matahari", e.sun_dec, dms);
+    pair("Asensiorekta Matahari", e.sun_ra, ra2hms);
+    pair("Deklinasi Bulan", e.moon_dec, dms);
+    pair("Asensiorekta Bulan", e.moon_ra, ra2hms);
+    push("— Koordinat Horizon —", "", "");
+    pair("Tinggi Matahari", e.sun_altitude, dms);
+    pair("Azimuth Matahari", e.sun_azimuth, dms);
+    pair("Tinggi Bulan", e.moon_altitude, dms);
+    pair("Azimuth Bulan", e.moon_azimuth, dms);
+    push("— Koreksi —", "", "");
+    push("Nutasi Bujur", num(e.nutation_long_arcsec, 2) + '"', "");
+    push("Nutasi Kemiringan", num(e.nutation_obl_arcsec, 2) + '"', "");
+    push("Parallax Matahari", dms(e.sun_hparallax_deg), "");
+    push("Parallax Bulan", dms(e.moon_hparallax_deg), "");
+    push("— Data Hilal —", "", "");
+    pair("Elongasi", e.elongation, dms);
+    push("Umur Bulan", hms(e.moon_age_hours), "");
+    push("Iluminasi", num(e.illumination_pct, 3) + "%", "");
+    push("Lebar Sabit", num(e.crescent_width_arcmin, 3) + "'", "");
+
+    document.getElementById("ephemeris-rows").innerHTML = rows.map(([k, g, t]) => {
+      const header = g === "" && t === "";
+      if (header) return `<tr class="bg-base-200/60"><td colspan="3" class="font-semibold">${k}</td></tr>`;
+      return `<tr><td>${k}</td><td class="text-right font-mono">${g}</td><td class="text-right font-mono">${t}</td></tr>`;
+    }).join("");
+  }
+
+  // ---------- kriteria detail ----------
+  function badge(v) {
+    return v ? '<span class="badge badge-success badge-sm">Terlihat</span>'
+             : '<span class="badge badge-ghost badge-sm">Tidak</span>';
+  }
+  function renderCriteria(simple, det) {
+    const rows = [];
+    const zone = (c) => `zona ${c.VisibilityCode}, q=${num(c.QValue, 3)}, ARCV=${num(c.ARCV, 2)}°, W=${num(c.CrescentWidth, 2)}'`;
+    rows.push(["MABIMS 2021", det.mabims_new.IsVisible, `tinggi=${num(det.mabims_new.MoonAltitude, 2)}°, elong=${num(det.mabims_new.GeocentricElongation, 2)}° (≥3°/≥6.4°)`]);
+    rows.push(["MABIMS Lama", det.mabims_old.IsVisible, `tinggi=${num(det.mabims_old.MoonAltitude, 2)}°, elong=${num(det.mabims_old.GeocentricElongation, 2)}°, umur=${num(det.mabims_old.MoonAgeHours, 1)}j`]);
+    rows.push(["Wujudul Hilal", det.wujudul_hilal.IsVisible, `tinggi=${num(det.wujudul_hilal.MoonAltitude, 2)}° (>0° & ijtimak<magrib)`]);
+    rows.push(["Odeh", det.odeh.IsVisible, zone(det.odeh)]);
+    rows.push(["Yallop", det.yallop.IsVisible, zone(det.yallop)]);
+    rows.push(["Turkey", det.turkey.IsVisible, `tinggi=${num(det.turkey.MoonAltitude, 2)}°, elong=${num(det.turkey.Elongation, 2)}° (≥5°/≥8°)`]);
+    rows.push(["Danjon", det.danjon.IsVisible, `tinggi=${num(det.danjon.MoonAltitude, 2)}°, elong=${num(det.danjon.Elongation, 2)}° (>0°/>7°)`]);
+    rows.push(["LFNU", det.lfnu.IsVisible, `tinggi=${num(det.lfnu.MoonAltitude, 2)}°, elong=${num(det.lfnu.Elongation, 2)}° (≥2°/≥3°)`]);
+    rows.push(["Ijtima Qabla Ghurub", det.ijtima_qabla_ghurub.IsVisible, det.ijtima_qabla_ghurub.IjtimakBeforeMaghrib ? "ijtimak sebelum magrib" : "ijtimak setelah magrib"]);
+    rows.push(["KHGT (global)", det.khgt.IsVisible, det.khgt.GlobalVisible ? `terlihat global (lat=${num(det.khgt.EarliestLat, 0)}° lon=${num(det.khgt.EarliestLon, 0)}°)` : "tidak terlihat global"]);
+
+    document.getElementById("criteria-rows").innerHTML = rows.map(([k, v, info]) =>
+      `<tr><td class="font-medium">${k}</td><td>${badge(v)}</td><td class="text-right text-xs text-base-content/70">${info}</td></tr>`).join("");
+  }
+
+  // ---------- export ----------
+  function buildText(d) {
+    const e = d.ephemeris, L = d.location, D = d.date;
+    let out = "DATA HILAL — Al Falak DPUA\n";
+    out += `Lokasi: ${L.latitude}, ${L.longitude} (elev ${L.elevation} m, UTC${L.timezone >= 0 ? "+" : ""}${L.timezone})\n`;
+    out += `Tanggal: ${D.year}-${String(D.month).padStart(2, "0")}-${D.day}\n\n`;
+    out += `JD: ${num(e.jd, 6)}   Delta T: ${num(e.delta_t, 2)} dtk\n`;
+    out += `Sunset: ${hms(e.sunset_local)}   Moonset: ${hms(e.moonset_local)}   Lag: ${hms(e.lag_time)}\n\n`;
+    const line = (l, g, t) => l.padEnd(26) + String(g).padStart(16) + (t !== "" ? String(t).padStart(16) : "") + "\n";
+    out += line("Tinggi Bulan (topo)", dms(e.moon_altitude.topo), "");
+    out += line("Azimuth Bulan (topo)", dms(e.moon_azimuth.topo), "");
+    out += line("Elongasi geo/topo", dms(e.elongation.geo), dms(e.elongation.topo));
+    out += line("Umur Bulan", hms(e.moon_age_hours), "");
+    out += line("Iluminasi", num(e.illumination_pct, 3) + "%", "");
+    out += line("Lebar Sabit", num(e.crescent_width_arcmin, 3) + "'", "");
+    out += "\nKRITERIA:\n";
+    const c = d.criteria_detailed;
+    out += `  MABIMS 2021     : ${c.mabims_new.IsVisible ? "TERLIHAT" : "tidak"}\n`;
+    out += `  Odeh            : zona ${c.odeh.VisibilityCode} (q=${num(c.odeh.QValue, 3)})\n`;
+    out += `  Yallop          : zona ${c.yallop.VisibilityCode} (q=${num(c.yallop.QValue, 3)})\n`;
+    out += `  KHGT global     : ${c.khgt.IsVisible ? "TERLIHAT" : "tidak"}\n`;
+    return out;
+  }
+  function buildCSV(d) {
+    const e = d.ephemeris;
+    const rows = [["Parameter", "Geosentrik", "Toposentrik"]];
+    const pr = (l, o, f) => rows.push([l, f(o.geo), f(o.topo)]);
+    rows.push(["JD", num(e.jd, 6), ""]);
+    rows.push(["Delta T (dtk)", num(e.delta_t, 2), ""]);
+    pr("Bujur Matahari", e.sun_longitude, dms);
+    pr("Bujur Bulan", e.moon_longitude, dms);
+    pr("Deklinasi Bulan", e.moon_dec, dms);
+    pr("Asensiorekta Bulan", e.moon_ra, ra2hms);
+    pr("Tinggi Bulan", e.moon_altitude, dms);
+    pr("Azimuth Bulan", e.moon_azimuth, dms);
+    pr("Elongasi", e.elongation, dms);
+    rows.push(["Umur Bulan", hms(e.moon_age_hours), ""]);
+    rows.push(["Iluminasi (%)", num(e.illumination_pct, 3), ""]);
+    rows.push(["Lebar Sabit (')", num(e.crescent_width_arcmin, 3), ""]);
+    const esc = (v) => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
+    return "﻿" + rows.map((r) => r.map(esc).join(",")).join("\n");
+  }
+  function download(name, text, mime) {
+    const blob = new Blob([text], { type: mime });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  document.getElementById("btn-txt").addEventListener("click", () => lastData && download("hilal.txt", buildText(lastData), "text/plain"));
+  document.getElementById("btn-csv").addEventListener("click", () => lastData && download("hilal.csv", buildCSV(lastData), "text/csv"));
+
+  // ---------- submit ----------
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
     clearStatus();
-    ephCard.classList.add("hidden");
-    critCard.classList.add("hidden");
+    resultsEl.classList.add("hidden");
     setStatus("info", "Menghitung…");
-
     const fd = new FormData(form);
     const body = {
-      latitude: parseFloat(fd.get("latitude")),
-      longitude: parseFloat(fd.get("longitude")),
-      elevation: parseFloat(fd.get("elevation")),
-      timezone: parseFloat(fd.get("timezone")),
-      year: parseInt(fd.get("year"), 10),
-      month: parseInt(fd.get("month"), 10),
-      day: parseFloat(fd.get("day")),
+      latitude: parseFloat(fd.get("latitude")), longitude: parseFloat(fd.get("longitude")),
+      elevation: parseFloat(fd.get("elevation")), timezone: parseFloat(fd.get("timezone")),
+      year: parseInt(fd.get("year"), 10), month: parseInt(fd.get("month"), 10), day: parseFloat(fd.get("day")),
     };
-
     try {
       const res = await fetch(window.API_BASE + "/api/alfalak/hilal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setStatus("error", "Gagal: " + (err.error || res.status));
-        return;
-      }
+      if (!res.ok) { const err = await res.json().catch(() => ({})); setStatus("error", "Gagal: " + (err.error || res.status)); return; }
       const data = await res.json();
+      lastData = data;
       clearStatus();
-      renderEphemeris(data.ephemeris || {});
-      renderCriteria(data.criteria || {});
+      renderSummary(data.ephemeris);
+      renderMoon(data.ephemeris);
+      renderEphemeris(data.ephemeris);
+      renderCriteria(data.criteria, data.criteria_detailed);
+      resultsEl.classList.remove("hidden");
     } catch (err) {
       setStatus("error", "Tidak bisa menghubungi backend: " + err.message);
     }
