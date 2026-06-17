@@ -25,11 +25,16 @@ window.mountNav = function (active, me) {
     link("im", "hisab.html?method=im", "Irsyadul Murid") +
     link("aniq", "hisab.html?method=aniq", "Ad-Durr al-Anīq") +
     link("maghib", "maghib.html", "Maghīb al-Qamarain") +
-    link("alfalak", "alfalak-hilal.html", "Al Falak") +
+    link("alfalak", "alfalak-hilal.html", "Al Falak DPUA") +
     link("alfalak-map", "alfalak-map.html", "Peta Hilal");
   const adminLink = me && me.role === "admin" ? link("admin", "admin.html", "Admin") : "";
-  const greet = me ? `<span class="text-sm text-base-content/70 hidden sm:inline-flex items-center gap-1">${window.icons.user}${me.name}</span>` : "";
   const themeBtn = `<button onclick="toggleTheme()" class="btn btn-sm btn-ghost btn-circle" title="Mode terang/gelap" aria-label="Ganti tema">${window.icons.theme}</button>`;
+  // Sisi kanan adaptif: login → sapaan + Logout; belum login → Masuk/Daftar.
+  const authArea = me
+    ? `<span class="text-sm text-base-content/70 hidden sm:inline-flex items-center gap-1">${window.icons.user}${me.name}</span>
+       <button onclick="logout()" class="btn btn-sm btn-ghost">Logout</button>`
+    : `<a href="login.html" class="btn btn-sm btn-ghost">Masuk</a>
+       <a href="register.html" class="btn btn-sm btn-primary">Daftar</a>`;
   root.outerHTML = `
   <div class="navbar bg-base-100 shadow-sm sticky top-0 z-30 flex-wrap">
     <div class="flex-1">
@@ -41,9 +46,8 @@ window.mountNav = function (active, me) {
     <div class="flex-none gap-1 items-center flex-wrap justify-end">
       ${methods}
       ${adminLink}
-      ${greet}
       ${themeBtn}
-      <button onclick="logout()" class="btn btn-sm btn-ghost">Logout</button>
+      ${authArea}
     </div>
   </div>`;
 };
