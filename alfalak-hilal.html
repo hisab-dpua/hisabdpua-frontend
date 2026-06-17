@@ -16,7 +16,7 @@
   <main class="container mx-auto p-4 max-w-6xl space-y-6">
     <h1 class="text-2xl font-bold no-print">Hisab Hilal &amp; Data Lengkap (Al Falak)</h1>
 
-    <form id="alfalak-hilal-form" class="card bg-base-100 shadow p-5 no-print space-y-4">
+    <form id="alfalak-hilal-form" class="card glass-panel hover-lift shadow p-5 no-print space-y-4">
       <!-- LOKASI -->
       <fieldset class="border border-base-300 rounded-lg p-3">
         <legend class="text-sm font-semibold px-1">Lokasi (Markaz)</legend>
@@ -84,7 +84,7 @@
     </form>
 
     <!-- Riwayat perhitungan (lokal, di perangkat ini) -->
-    <div id="history-card" class="card bg-base-100 shadow p-4 hidden no-print">
+    <div id="history-card" class="card glass-panel hover-lift shadow p-4 hidden no-print">
       <div class="flex items-center justify-between mb-2">
         <h2 class="card-title text-base">Riwayat Perhitungan</h2>
         <button type="button" id="history-clear" class="btn btn-ghost btn-xs">Hapus semua</button>
@@ -94,7 +94,7 @@
 
     <div id="status" class="hidden"></div>
 
-    <div id="results" class="hidden space-y-6">
+    <div id="results" class="hidden space-y-6 animate-fade-in-up">
       <!-- Toolbar export -->
       <div class="flex flex-wrap gap-2 no-print">
         <button type="button" id="btn-pdf" class="btn btn-sm btn-primary btn-outline">Cetak / PDF</button>
@@ -109,15 +109,15 @@
 
       <!-- Info dasar + Posisi Bulan + Data Matahari (panel berkartu ala desktop) -->
       <div class="grid md:grid-cols-3 gap-4">
-        <div class="card bg-base-100 shadow p-4">
+        <div class="card glass-panel hover-lift shadow p-4">
           <h2 class="card-title text-sm uppercase opacity-70 mb-2">Informasi Dasar</h2>
           <div id="basic-info" class="space-y-1.5 text-sm"></div>
         </div>
-        <div class="card bg-base-100 shadow p-4">
+        <div class="card glass-panel hover-lift shadow p-4">
           <h2 class="card-title text-sm uppercase opacity-70 mb-2">Posisi Bulan</h2>
           <div id="moon-pos" class="space-y-1.5 text-sm"></div>
         </div>
-        <div class="card bg-base-100 shadow p-4">
+        <div class="card glass-panel hover-lift shadow p-4">
           <h2 class="card-title text-sm uppercase opacity-70 mb-2">Data Matahari</h2>
           <div id="sun-data" class="space-y-1.5 text-sm"></div>
         </div>
@@ -125,11 +125,11 @@
 
       <!-- Ringkasan + visualisasi sabit -->
       <div class="grid md:grid-cols-3 gap-4">
-        <div class="card bg-base-100 shadow p-4 md:col-span-2">
+        <div class="card glass-panel hover-lift shadow p-4 md:col-span-2">
           <h2 class="card-title text-base mb-2">Ringkasan Hilal</h2>
           <div id="summary-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm"></div>
         </div>
-        <div class="card bg-base-100 shadow p-4 flex flex-col items-center justify-center">
+        <div class="card glass-panel hover-lift shadow p-4 flex flex-col items-center justify-center">
           <h2 class="card-title text-base mb-2 self-start">Bentuk Sabit</h2>
           <div id="moon-viz"></div>
           <div id="moon-viz-caption" class="text-xs text-base-content/60 mt-2 text-center"></div>
@@ -137,14 +137,14 @@
       </div>
 
       <!-- Diagram ufuk: posisi Matahari & Bulan saat magrib -->
-      <div class="card bg-base-100 shadow p-4">
+      <div class="card glass-panel hover-lift shadow p-4">
         <h2 class="card-title text-base mb-2">Diagram Ufuk Barat (saat Matahari terbenam)</h2>
         <div id="horizon-viz" class="w-full overflow-x-auto"></div>
         <div id="horizon-caption" class="text-xs text-base-content/60 mt-2"></div>
       </div>
 
       <!-- Tabel ephemeris penuh (DATA HILAL — meniru Al Falak DPUA) -->
-      <div class="card bg-base-100 shadow p-4">
+      <div class="card glass-panel hover-lift shadow p-4">
         <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
           <h2 class="card-title text-base">Data Ephemeris Lengkap</h2>
           <span id="eph-engine-badge" class="badge badge-outline badge-sm"></span>
@@ -164,7 +164,7 @@
       </div>
 
       <!-- Kriteria detail -->
-      <div class="card bg-base-100 shadow p-4">
+      <div class="card glass-panel hover-lift shadow p-4">
         <h2 class="card-title text-base mb-2">Kriteria Visibilitas (Detail)</h2>
         <div class="overflow-x-auto">
           <table class="table table-sm">

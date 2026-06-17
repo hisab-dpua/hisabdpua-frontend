@@ -94,6 +94,46 @@ window.setLoading = function (btn, on) {
   document.head.appendChild(style);
 })();
 
+// ─────────── Latar bintang berkelip (port dari desktop) ───────────
+// Membuat #star-field bila belum ada, lalu menaburkan N titik dengan posisi,
+// ukuran, durasi, dan opacity acak. CSS (.star/.twinkle) di theme.css.
+// Hormati prefers-reduced-motion (titik statis, tanpa animasi).
+window.initStarField = function (count = 70) {
+  const make = () => {
+    let host = document.getElementById("star-field");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "star-field";
+      host.className = "star-field";
+      host.setAttribute("aria-hidden", "true");
+      document.body.insertBefore(host, document.body.firstChild);
+    }
+    if (host.childElementCount) return; // sudah diisi
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement("div");
+      s.className = "star";
+      const size = (Math.random() * 2 + 0.6).toFixed(2);
+      s.style.width = size + "px";
+      s.style.height = size + "px";
+      s.style.left = (Math.random() * 100).toFixed(2) + "%";
+      s.style.top = (Math.random() * 100).toFixed(2) + "%";
+      s.style.setProperty("--duration", (Math.random() * 4 + 3).toFixed(1) + "s");
+      s.style.setProperty("--opacity", (Math.random() * 0.6 + 0.3).toFixed(2));
+      if (reduce) s.style.animation = "none";
+      s.style.animationDelay = (Math.random() * 5).toFixed(1) + "s";
+      frag.appendChild(s);
+    }
+    host.appendChild(frag);
+  };
+  if (document.body) make();
+  else document.addEventListener("DOMContentLoaded", make);
+};
+
+// Aktifkan otomatis di setiap halaman yang memuat ui.js.
+window.initStarField();
+
 // ───────────────────────── Toast notifikasi ─────────────────────────
 // toast(msg, kind) — kind: "success" | "error" | "warning" | "info".
 // Muncul di kanan-bawah, auto-hilang. Pengganti alert() yang lebih halus.

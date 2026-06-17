@@ -20,25 +20,25 @@
       Hanya admin yang bisa akses halaman ini.
     </div>
 
-    <div id="admin-content" class="hidden">
+    <div id="admin-content" class="hidden animate-fade-in-up">
       <!-- Dashboard ringkas -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div class="stats shadow bg-base-100"><div class="stat p-3">
+        <div class="stats shadow glass-panel hover-lift"><div class="stat p-3">
           <div class="stat-title text-xs">Total User</div>
           <div class="stat-value text-2xl" id="stat-users">—</div>
           <div class="stat-desc text-xs" id="stat-admins"></div>
         </div></div>
-        <div class="stats shadow bg-base-100"><div class="stat p-3">
+        <div class="stats shadow glass-panel hover-lift"><div class="stat p-3">
           <div class="stat-title text-xs">Menunggu Approval</div>
           <div class="stat-value text-2xl text-warning" id="stat-pending">—</div>
           <div class="stat-desc text-xs">perlu tindakan</div>
         </div></div>
-        <div class="stats shadow bg-base-100"><div class="stat p-3">
+        <div class="stats shadow glass-panel hover-lift"><div class="stat p-3">
           <div class="stat-title text-xs">Total Kota</div>
           <div class="stat-value text-2xl" id="stat-cities">—</div>
           <div class="stat-desc text-xs" id="stat-default-cities"></div>
         </div></div>
-        <div class="stats shadow bg-base-100"><div class="stat p-3">
+        <div class="stats shadow glass-panel hover-lift"><div class="stat p-3">
           <div class="stat-title text-xs">Pendaftaran Terakhir</div>
           <div class="stat-value text-sm" id="stat-last-reg">—</div>
           <div class="stat-desc text-xs truncate" id="stat-last-name"></div>
@@ -54,7 +54,7 @@
       <!-- ====== PANEL PENGGUNA ====== -->
       <section id="panel-users">
         <!-- Pending users -->
-        <div class="card bg-base-100 shadow p-5 mb-6">
+        <div class="card glass-panel hover-lift shadow p-5 mb-6">
           <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
             <h2 class="text-lg font-bold">Menunggu Approval (<span id="pending-count">0</span>)</h2>
             <button id="approve-all" class="btn btn-success btn-xs hidden">Approve Semua</button>
@@ -69,7 +69,7 @@
         </div>
 
         <!-- All users -->
-        <div class="card bg-base-100 shadow p-5">
+        <div class="card glass-panel hover-lift shadow p-5">
           <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
             <h2 class="text-lg font-bold">Semua User (<span id="users-count">0</span>)</h2>
             <div class="flex gap-2 flex-wrap">
@@ -103,7 +103,7 @@
       <!-- ====== PANEL KOTA ====== -->
       <section id="panel-cities" class="hidden">
         <!-- Tambah kota -->
-        <div class="card bg-base-100 shadow p-5 mb-6">
+        <div class="card glass-panel hover-lift shadow p-5 mb-6">
           <h2 class="text-lg font-bold mb-3">Tambah Kota</h2>
           <form id="create-form" class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <input name="name" placeholder="Nama (mis. Surabaya)" class="input input-bordered input-sm" required>
@@ -122,7 +122,7 @@
         </div>
 
         <!-- Daftar kota -->
-        <div class="card bg-base-100 shadow p-5">
+        <div class="card glass-panel hover-lift shadow p-5">
           <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
             <h2 class="text-lg font-bold">Daftar Kota (<span id="cities-count">0</span>)</h2>
             <div class="flex gap-2 flex-wrap items-center">
