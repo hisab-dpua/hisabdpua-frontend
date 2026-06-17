@@ -11,16 +11,25 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* ---------- Tema terang "alfalak" ---------- */
+/* ---------- Palet kustom (krem → navy) ----------
+ * F0ECDD krem · 8BA3C5 biru lembut · 495B7D slate · 23354D navy · 02122F navy gelap
+ * Nilai OKLCH (L% C H) dikonversi presisi dari hex di atas.
+ */
+
+/* ---------- Tema terang "alfalak" (latar krem) ---------- */
 [data-theme="alfalak"] {
-  --p: 62.3083% 0.1880 259.8145;   /* primary  #3b82f6 */
-  --s: 60.5631% 0.2189 292.7172;   /* secondary #8b5cf6 */
-  --a: 71.4837% 0.1257 215.2209;   /* accent   #06b6d4 */
-  --n: 27.9495% 0.0368 260.0310;   /* neutral  #1e293b */
-  --b1: 100% 0 89.8756;            /* base-100 #ffffff */
-  --b2: 98.4152% 0.0034 247.8575;  /* base-200 #f8fafc */
-  --b3: 96.8260% 0.0069 247.8956;  /* base-300 #f1f5f9 */
-  --bc: 27.9495% 0.0368 260.0310;  /* base-content #1e293b */
+  --p: 47.0684% 0.0598 262.7359;   /* primary  #495B7D (slate) */
+  --pc: 94.2138% 0.0204 94.5298;   /* teks di primary: krem #F0ECDD */
+  --s: 70.9119% 0.0568 257.0918;   /* secondary #8BA3C5 (biru lembut) */
+  --sc: 18.8729% 0.0632 258.8595;  /* teks di secondary: navy #02122F */
+  --a: 70.9119% 0.0568 257.0918;   /* accent   #8BA3C5 */
+  --ac: 18.8729% 0.0632 258.8595;  /* teks di accent: navy #02122F */
+  --n: 32.5175% 0.0490 255.8932;   /* neutral  #23354D */
+  --nc: 94.2138% 0.0204 94.5298;   /* teks di neutral: krem */
+  --b1: 94.2138% 0.0204 94.5298;   /* base-100 #F0ECDD (krem) */
+  --b2: 91.0000% 0.0210 94.5000;   /* base-200 krem sedikit lebih gelap */
+  --b3: 86.5000% 0.0240 92.0000;   /* base-300 krem lebih gelap */
+  --bc: 18.8729% 0.0632 258.8595;  /* base-content navy #02122F */
   --rounded-box: 1rem;
   --rounded-btn: 0.5rem;
   --rounded-badge: 1.9rem;
@@ -28,14 +37,18 @@
 
 /* ---------- Tema gelap "alfalak-dark" (langit malam) ---------- */
 [data-theme="alfalak-dark"] {
-  --p: 75.3513% 0.1390 232.6615;   /* primary  #38bdf8 */
-  --s: 68.0113% 0.1583 276.9349;   /* secondary #818cf8 */
-  --a: 79.7116% 0.1339 211.5302;   /* accent   #22d3ee */
-  --n: 20.7682% 0.0398 265.7549;   /* neutral  #0f172a */
-  --b1: 12.8802% 0.0406 264.6952;  /* base-100 #020617 (slate 950) */
-  --b2: 20.7682% 0.0398 265.7549;  /* base-200 #0f172a */
-  --b3: 27.9495% 0.0368 260.0310;  /* base-300 #1e293b */
-  --bc: 96.8260% 0.0069 247.8956;  /* base-content #f1f5f9 */
+  --p: 70.9119% 0.0568 257.0918;   /* primary  #8BA3C5 (cerah agar kontras) */
+  --pc: 18.8729% 0.0632 258.8595;  /* teks di primary: navy */
+  --s: 47.0684% 0.0598 262.7359;   /* secondary #495B7D */
+  --sc: 94.2138% 0.0204 94.5298;   /* teks di secondary: krem */
+  --a: 94.2138% 0.0204 94.5298;    /* accent   #F0ECDD (krem) */
+  --ac: 18.8729% 0.0632 258.8595;  /* teks di accent: navy */
+  --n: 32.5175% 0.0490 255.8932;   /* neutral  #23354D */
+  --nc: 94.2138% 0.0204 94.5298;   /* teks di neutral: krem */
+  --b1: 18.8729% 0.0632 258.8595;  /* base-100 #02122F (navy terdalam) */
+  --b2: 32.5175% 0.0490 255.8932;  /* base-200 #23354D */
+  --b3: 40.0000% 0.0540 258.0000;  /* base-300 antara 23354D & 495B7D */
+  --bc: 94.2138% 0.0204 94.5298;   /* base-content krem #F0ECDD */
   --rounded-box: 1rem;
   --rounded-btn: 0.5rem;
   --rounded-badge: 1.9rem;
@@ -54,7 +67,7 @@ body {
 [data-theme="alfalak-dark"] .leaflet-tile-pane {
   filter: brightness(0.7) contrast(1.1) saturate(0.9);
 }
-[data-theme="alfalak-dark"] .leaflet-container { background: #0f172a; }
+[data-theme="alfalak-dark"] .leaflet-container { background: #02122f; }
 
 /* ---------- Transisi halus ganti tema ---------- */
 html, body, .card, .navbar, .btn, .input, .select, .table {
@@ -67,18 +80,18 @@ html, body, .card, .navbar, .btn, .input, .select, .table {
 .star-field {
   position: fixed; inset: 0; width: 100%; height: 100%;
   z-index: -1; pointer-events: none; overflow: hidden;
-  background: radial-gradient(ellipse at bottom, #f1f5f9 0%, #ffffff 100%);
+  background: radial-gradient(ellipse at bottom, #e6e0cb 0%, #f0ecdd 100%);
 }
 [data-theme="alfalak-dark"] .star-field {
-  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+  background: radial-gradient(ellipse at bottom, #23354d 0%, #02122f 100%);
 }
 .star {
   position: absolute; top: 0; left: 0; border-radius: 50%;
   background-color: #fff; opacity: 0;
   animation: twinkle var(--duration, 5s) infinite ease-in-out;
 }
-/* Mode terang: bintang lebih gelap agar terlihat di latar putih. */
-[data-theme="alfalak"] .star { background-color: #93a3b8; }
+/* Mode terang: bintang slate agar terlihat di latar krem. */
+[data-theme="alfalak"] .star { background-color: #8ba3c5; }
 @keyframes twinkle {
   0%   { transform: scale(0.5); opacity: 0; }
   50%  { transform: scale(1.2); opacity: var(--opacity, 0.8); }
@@ -87,16 +100,16 @@ html, body, .card, .navbar, .btn, .input, .select, .table {
 
 /* Glassmorphism: kartu kaca + blur. */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(252, 250, 242, 0.82);   /* krem terang transparan */
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05);
+  border: 1px solid rgba(73, 91, 125, 0.14); /* tepi slate lembut */
+  box-shadow: 0 4px 6px -1px rgba(35,53,77,0.10), 0 2px 4px -1px rgba(35,53,77,0.06);
 }
 [data-theme="alfalak-dark"] .glass-panel {
-  background: rgba(15, 23, 42, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.18);
+  background: rgba(35, 53, 77, 0.55);        /* navy 23354D transparan */
+  border: 1px solid rgba(139, 163, 197, 0.14);
+  box-shadow: 0 4px 30px rgba(2, 18, 47, 0.35);
 }
 
 /* Animasi muncul + delay bertingkat. */
