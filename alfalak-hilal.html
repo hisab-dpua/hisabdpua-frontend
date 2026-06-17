@@ -74,6 +74,25 @@
         <button type="button" id="btn-print" class="btn btn-sm btn-outline" onclick="window.print()">Cetak</button>
       </div>
 
+      <!-- PENILAIAN VISIBILITAS (banner menonjol, ala desktop) -->
+      <div id="verdict" class="card shadow-lg"></div>
+
+      <!-- Info dasar + Posisi Bulan + Data Matahari (panel berkartu ala desktop) -->
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="card bg-base-100 shadow p-4">
+          <h2 class="card-title text-sm uppercase opacity-70 mb-2">Informasi Dasar</h2>
+          <div id="basic-info" class="space-y-1.5 text-sm"></div>
+        </div>
+        <div class="card bg-base-100 shadow p-4">
+          <h2 class="card-title text-sm uppercase opacity-70 mb-2">Posisi Bulan</h2>
+          <div id="moon-pos" class="space-y-1.5 text-sm"></div>
+        </div>
+        <div class="card bg-base-100 shadow p-4">
+          <h2 class="card-title text-sm uppercase opacity-70 mb-2">Data Matahari</h2>
+          <div id="sun-data" class="space-y-1.5 text-sm"></div>
+        </div>
+      </div>
+
       <!-- Ringkasan + visualisasi sabit -->
       <div class="grid md:grid-cols-3 gap-4">
         <div class="card bg-base-100 shadow p-4 md:col-span-2">

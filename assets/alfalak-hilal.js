@@ -113,6 +113,81 @@
     return String(hh).padStart(2, "0") + "h " + String(mm).padStart(2, "0") + "m " + String(ss).padStart(2, "0") + "s";
   }
   const num = (v, d = 3) => (v == null || isNaN(v)) ? "—" : Number(v).toFixed(d);
+  function row(label, val) {
+    return `<div class="flex justify-between gap-2"><span class="opacity-70">${label}</span><span class="font-mono font-medium text-right">${val}</span></div>`;
+  }
+  const check = (ok) => ok
+    ? '<svg class="w-4 h-4 inline text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+    : '<svg class="w-4 h-4 inline text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+
+  // ---------- PENILAIAN VISIBILITAS (banner, ala desktop) ----------
+  function renderVerdict(data) {
+    const e = data.ephemeris, det = data.criteria_detailed;
+    // Acuan utama: MABIMS 2021 (kriteria resmi Indonesia).
+    const visible = det.mabims_new.IsVisible;
+    const alt = e.moon_altitude.topo, elong = det.mabims_new.GeocentricElongation, age = e.moon_age_hours;
+    const checks = [
+      [`Tinggi bulan ≥ 3°`, alt >= 3, `${num(alt, 2)}°`],
+      [`Elongasi ≥ 6.4°`, elong >= 6.4, `${num(elong, 2)}°`],
+      [`Umur bulan > 0`, age > 0, hms(age)],
+    ];
+    const cls = visible ? "bg-success/15 border-success" : "bg-error/10 border-error";
+    const icon = visible
+      ? '<svg class="w-10 h-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+      : '<svg class="w-10 h-10 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    document.getElementById("verdict").className = `card shadow-lg border-l-4 ${cls} p-5`;
+    document.getElementById("verdict").innerHTML = `
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="flex items-center gap-3">
+          ${icon}
+          <div>
+            <div class="text-xs uppercase opacity-60">Penilaian (MABIMS 2021)</div>
+            <div class="text-xl font-bold">${visible ? "HILAL TERLIHAT" : "HILAL TIDAK TERLIHAT"}</div>
+          </div>
+        </div>
+        <div class="sm:ml-auto flex flex-wrap gap-x-5 gap-y-1 text-sm">
+          ${checks.map(([l, ok, v]) => `<span class="inline-flex items-center gap-1.5">${check(ok)} ${l}: <b class="font-mono">${v}</b></span>`).join("")}
+        </div>
+      </div>`;
+  }
+
+  // ---------- Informasi Dasar ----------
+  function renderBasicInfo(data, body) {
+    const L = data.location, D = data.date;
+    document.getElementById("basic-info").innerHTML =
+      row("Tanggal", `${D.day}/${D.month}/${D.year} M`) +
+      row("Lokasi", `${num(L.latitude, 4)}°, ${num(L.longitude, 4)}°`) +
+      row("Elevasi", `${L.elevation} m`) +
+      row("Zona waktu", `UTC${L.timezone >= 0 ? "+" : ""}${L.timezone}`) +
+      row("JD (saat magrib)", num(data.ephemeris.jd, 6)) +
+      row("Delta T", `${num(data.ephemeris.delta_t, 2)} dtk`);
+  }
+
+  // ---------- Posisi Bulan (toposentrik) ----------
+  function renderMoonPos(e) {
+    document.getElementById("moon-pos").innerHTML =
+      row("Tinggi (topo)", dms(e.moon_altitude.topo)) +
+      row("Azimut (topo)", dms(e.moon_azimuth.topo)) +
+      row("Elongasi (topo)", dms(e.elongation.topo)) +
+      row("ARCV", `${num(e.arcv_deg, 3)}°`) +
+      row("Lebar sabit", `${num(e.crescent_width_arcmin, 3)}'`) +
+      row("Umur bulan", hms(e.moon_age_hours)) +
+      row("Jarak bulan", `${num(e.moon_dist_km, 0)} km`) +
+      row("Semidiameter", `${num(e.moon_semidiameter_arcmin, 2)}'`) +
+      row("Parallax", `${num(e.moon_hparallax_deg * 60, 2)}'`);
+  }
+
+  // ---------- Data Matahari ----------
+  function renderSunData(e) {
+    document.getElementById("sun-data").innerHTML =
+      row("Matahari terbenam", hms(e.sunset_local) + " WD") +
+      row("Tinggi (topo)", dms(e.sun_altitude.topo)) +
+      row("Azimut (topo)", dms(e.sun_azimuth.topo)) +
+      row("Equation of time", `${num(e.equation_of_time_min, 2)} mnt`) +
+      row("Semidiameter", `${num(e.sun_semidiameter_arcmin, 2)}'`) +
+      row("Jarak matahari", `${num(e.sun_dist_km / 1e6, 3)} jt km`) +
+      row("Refraksi (ufuk)", `${num(e.sun_refraction_arcmin, 2)}'`);
+  }
 
   // ---------- ringkasan (kartu stat dgn aksen) ----------
   function renderSummary(e) {
@@ -322,6 +397,10 @@
       const data = await res.json();
       lastData = data;
       clearStatus();
+      renderVerdict(data);
+      renderBasicInfo(data, body);
+      renderMoonPos(data.ephemeris);
+      renderSunData(data.ephemeris);
       renderSummary(data.ephemeris);
       renderMoon(data.ephemeris);
       renderEphemeris(data.ephemeris);
