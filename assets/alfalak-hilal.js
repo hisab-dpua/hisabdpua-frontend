@@ -334,76 +334,119 @@
   // Tabel DATA HILAL lengkap (meniru Al Falak DPUA) — konsumsi DetailedEphemeris.
   function diffDMS(g, t) { return (g == null || t == null || isNaN(g) || isNaN(t)) ? "" : dms(t - g); }
   function diffHMSra(g, t) { return (g == null || t == null) ? "" : ra2hms(t - g); }
+
+  // Ikon SVG kecil untuk banner section (Heroicons/feather, stroke=currentColor).
+  const EPH_ICONS = {
+    ekliptika: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    koreksi: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    ekuator: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="10" ry="4"/></svg>',
+    horizon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="16" x2="22" y2="16"/><circle cx="8" cy="11" r="3"/><circle cx="16" cy="13" r="2"/></svg>',
+    hilal: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  };
+
   function renderEphemeris(e) {
-    const rows = [];
-    const sec = (title) => rows.push(["sec", title]);
-    const A = (no, label, g, t) => rows.push([no, label, dms(g), dms(t), diffDMS(g, t)]);
-    const R = (no, label, g, t) => rows.push([no, label, ra2hms(g), ra2hms(t), diffHMSra(g, t)]);
-    const S = (no, label, val) => rows.push([no, label, val, "", ""]);
+    // Tiap section = objek {title, icon, hint, rows}. Tiap baris:
+    //   ["A", no, label, geoNum, topoNum]      → sudut (DMS) + selisih
+    //   ["R", no, label, geoDeg, topoDeg]      → RA (HMS) + selisih
+    //   ["S", no, label, valStr]               → nilai tunggal
+    //   ["P", no, label, geoStr, topoStr, sel] → string siap pakai (+selisih)
+    const sections = [
+      { title: "Koordinat Ekliptika", icon: EPH_ICONS.ekliptika, key: "ekliptika", rows: [
+        ["P", "1", "Ijtima' (Konjungsi)", e.conjunction_date || "—", e.conjunction_date_topo || "—", e.conjunction_diff || ""],
+        ["A", "2", "Semidiameter Matahari", e.sun_semidiameter_deg, e.sun_semidiameter_deg],
+        ["A", "3", "Semidiameter Bulan", e.moon_semidiameter_deg, e.moon_semidiameter_deg],
+        ["A", "4", "Bujur Ekliptika Matahari", e.sun_longitude_geo, e.sun_longitude_topo],
+        ["A", "5", "Lintang Ekliptika Matahari", e.sun_latitude_geo, e.sun_latitude_topo],
+        ["A", "6", "Bujur Ekliptika Bulan", e.moon_longitude_geo, e.moon_longitude_topo],
+        ["A", "7", "Lintang Ekliptika Bulan", e.moon_latitude_geo, e.moon_latitude_topo],
+      ]},
+      { title: "Koreksi Apparent", icon: EPH_ICONS.koreksi, key: "koreksi", rows: [
+        ["S", "8a", "Nutasi Sepanjang Bujur", num(e.nutation_longitude * 3600, 2) + '"'],
+        ["S", "8b", "Nutasi Kemiringan Ekliptika", num(e.nutation_obliquity * 3600, 2) + '"'],
+        ["S", "8c", "Aberasi Matahari", num(e.sun_aberration * 3600, 2) + '"'],
+        ["A", "9", "Bujur Ekliptika Matahari (Tampak)", e.sun_longitude_apparent_geo, e.sun_longitude_apparent_topo],
+        ["A", "10", "Lintang Ekliptika Matahari (Tampak)", e.sun_latitude_apparent_geo, e.sun_latitude_apparent_topo],
+        ["A", "11", "Bujur Ekliptika Bulan (Tampak)", e.moon_longitude_apparent_geo, e.moon_longitude_apparent_topo],
+        ["A", "12", "Lintang Ekliptika Bulan (Tampak)", e.moon_latitude_apparent_geo, e.moon_latitude_apparent_topo],
+      ]},
+      { title: "Koordinat Ekuator", icon: EPH_ICONS.ekuator, key: "ekuator", rows: [
+        ["A", "13", "Deklinasi Matahari", e.sun_dec_geo, e.sun_dec_topo],
+        ["R", "14", "Asensiorekta Matahari", e.sun_ra_geo, e.sun_ra_topo],
+        ["A", "15", "Deklinasi Bulan", e.moon_dec_geo, e.moon_dec_topo],
+        ["R", "16", "Asensiorekta Bulan", e.moon_ra_geo, e.moon_ra_topo],
+        ["A", "17", "Deklinasi Matahari (Tampak)", e.sun_dec_apparent_geo, e.sun_dec_apparent_topo],
+        ["R", "18", "Asensiorekta Matahari (Tampak)", e.sun_ra_apparent_geo, e.sun_ra_apparent_topo],
+        ["A", "19", "Deklinasi Bulan (Tampak)", e.moon_dec_apparent_geo, e.moon_dec_apparent_topo],
+        ["R", "20", "Asensiorekta Bulan (Tampak)", e.moon_ra_apparent_geo, e.moon_ra_apparent_topo],
+      ]},
+      { title: "Koordinat Horizon", icon: EPH_ICONS.horizon, key: "horizon", rows: [
+        ["A", "21", "Tinggi Matahari", e.sun_altitude_airless_geo, e.sun_altitude_airless_topo],
+        ["A", "22", "Azimuth Matahari", e.sun_azimuth_airless_geo, e.sun_azimuth_airless_topo],
+        ["A", "23", "Tinggi Bulan", e.moon_altitude_airless_geo, e.moon_altitude_airless_topo],
+        ["A", "24", "Azimuth Bulan", e.moon_azimuth_airless_geo, e.moon_azimuth_airless_topo],
+        ["A", "25", "Tinggi Matahari (Tampak)", e.sun_altitude_apparent_airless_geo, e.sun_altitude_apparent_airless_topo],
+        ["A", "26", "Azimuth Matahari (Tampak)", e.sun_azimuth_apparent_airless_geo, e.sun_azimuth_apparent_airless_topo],
+        ["A", "27", "Tinggi Bulan (Tampak)", e.moon_altitude_apparent_airless_geo, e.moon_altitude_apparent_airless_topo],
+        ["A", "28", "Azimuth Bulan (Tampak)", e.moon_azimuth_apparent_airless_geo, e.moon_azimuth_apparent_airless_topo],
+        ["A", "29", "Tinggi Matahari (Airy/refraksi)", e.sun_altitude_airy_geo, e.sun_altitude_airy_topo],
+        ["S", "30", "Koreksi Refraksi Matahari", dms(e.sun_refraction)],
+        ["A", "31", "Tinggi Bulan (Airy/refraksi)", e.moon_altitude_airy_geo, e.moon_altitude_airy_topo],
+        ["S", "32", "Koreksi Refraksi Bulan", dms(e.moon_refraction)],
+        ["S", "33", "Horizontal Parallax Matahari", dms(e.sun_horizontal_parallax)],
+        ["S", "34", "Horizontal Parallax Bulan", dms(e.moon_horizontal_parallax)],
+      ]},
+      { title: "Data Bulan (Hilal)", icon: EPH_ICONS.hilal, key: "hilal", rows: [
+        ["P", "35", "Umur Bulan", hms(e.moon_age_hours_geo), hms(e.moon_age_hours_topo), ""],
+        ["A", "36", "Elongasi", e.elongation_geo, e.elongation_topo],
+        ["P", "37", "Kecerlangan (Iluminasi)", num(e.illumination_geo, 2) + "%", num(e.illumination_topo, 2) + "%", ""],
+        ["P", "38", "Lebar Sabit", num(e.crescent_width_geo, 2) + "'", num(e.crescent_width_topo, 2) + "'", ""],
+        ["A", "39", "Tinggi Piringan Atas", e.upper_limb_altitude_geo, e.upper_limb_altitude_topo],
+        ["A", "40", "Tinggi Pusat Piringan", e.center_altitude_geo, e.center_altitude_topo],
+        ["A", "41", "Tinggi Piringan Bawah", e.lower_limb_altitude_geo, e.lower_limb_altitude_topo],
+        ["A", "42", "Tinggi Relatif", e.relative_altitude_geo, e.relative_altitude_topo],
+        ["A", "43", "Azimuth Relatif", e.relative_azimuth_geo, e.relative_azimuth_topo],
+        ["A", "44", "Sudut Fase", e.phase_angle_geo, e.phase_angle_topo],
+        ["P", "45", "Arah Hilal", e.arah_hilal_geo || "—", e.arah_hilal_topo || "—", ""],
+        ["P", "46", "Kedudukan Hilal", e.kedudukan_hilal_geo || "—", e.kedudukan_hilal_topo || "—", ""],
+      ]},
+    ];
 
-    sec("Koordinat Ekliptika");
-    S("1", "Ijtima' (Konjungsi)", e.conjunction_date || "—");
-    rows.push(["", "— toposentrik", "", e.conjunction_date_topo || "—", e.conjunction_diff || ""]);
-    A("2", "Semidiameter Matahari", e.sun_semidiameter_deg, e.sun_semidiameter_deg);
-    A("3", "Semidiameter Bulan", e.moon_semidiameter_deg, e.moon_semidiameter_deg);
-    A("4", "Bujur Ekliptika Matahari", e.sun_longitude_geo, e.sun_longitude_topo);
-    A("5", "Lintang Ekliptika Matahari", e.sun_latitude_geo, e.sun_latitude_topo);
-    A("6", "Bujur Ekliptika Bulan", e.moon_longitude_geo, e.moon_longitude_topo);
-    A("7", "Lintang Ekliptika Bulan", e.moon_latitude_geo, e.moon_latitude_topo);
-    sec("Koreksi Apparent");
-    S("8a", "Nutasi Sepanjang Bujur", num(e.nutation_longitude * 3600, 2) + '"');
-    S("8b", "Nutasi Kemiringan Ekliptika", num(e.nutation_obliquity * 3600, 2) + '"');
-    S("8c", "Aberasi Matahari", num(e.sun_aberration * 3600, 2) + '"');
-    A("9", "Bujur Ekliptika Matahari (Tampak)", e.sun_longitude_apparent_geo, e.sun_longitude_apparent_topo);
-    A("10", "Lintang Ekliptika Matahari (Tampak)", e.sun_latitude_apparent_geo, e.sun_latitude_apparent_topo);
-    A("11", "Bujur Ekliptika Bulan (Tampak)", e.moon_longitude_apparent_geo, e.moon_longitude_apparent_topo);
-    A("12", "Lintang Ekliptika Bulan (Tampak)", e.moon_latitude_apparent_geo, e.moon_latitude_apparent_topo);
-    sec("Koordinat Ekuator");
-    A("13", "Deklinasi Matahari", e.sun_dec_geo, e.sun_dec_topo);
-    R("14", "Asensiorekta Matahari", e.sun_ra_geo, e.sun_ra_topo);
-    A("15", "Deklinasi Bulan", e.moon_dec_geo, e.moon_dec_topo);
-    R("16", "Asensiorekta Bulan", e.moon_ra_geo, e.moon_ra_topo);
-    A("17", "Deklinasi Matahari (Tampak)", e.sun_dec_apparent_geo, e.sun_dec_apparent_topo);
-    R("18", "Asensiorekta Matahari (Tampak)", e.sun_ra_apparent_geo, e.sun_ra_apparent_topo);
-    A("19", "Deklinasi Bulan (Tampak)", e.moon_dec_apparent_geo, e.moon_dec_apparent_topo);
-    R("20", "Asensiorekta Bulan (Tampak)", e.moon_ra_apparent_geo, e.moon_ra_apparent_topo);
-    sec("Koordinat Horizon");
-    A("21", "Tinggi Matahari", e.sun_altitude_airless_geo, e.sun_altitude_airless_topo);
-    A("22", "Azimuth Matahari", e.sun_azimuth_airless_geo, e.sun_azimuth_airless_topo);
-    A("23", "Tinggi Bulan", e.moon_altitude_airless_geo, e.moon_altitude_airless_topo);
-    A("24", "Azimuth Bulan", e.moon_azimuth_airless_geo, e.moon_azimuth_airless_topo);
-    A("25", "Tinggi Matahari (Tampak)", e.sun_altitude_apparent_airless_geo, e.sun_altitude_apparent_airless_topo);
-    A("26", "Azimuth Matahari (Tampak)", e.sun_azimuth_apparent_airless_geo, e.sun_azimuth_apparent_airless_topo);
-    A("27", "Tinggi Bulan (Tampak)", e.moon_altitude_apparent_airless_geo, e.moon_altitude_apparent_airless_topo);
-    A("28", "Azimuth Bulan (Tampak)", e.moon_azimuth_apparent_airless_geo, e.moon_azimuth_apparent_airless_topo);
-    A("29", "Tinggi Matahari (Airy/refraksi)", e.sun_altitude_airy_geo, e.sun_altitude_airy_topo);
-    S("30", "Koreksi Refraksi Matahari", dms(e.sun_refraction));
-    A("31", "Tinggi Bulan (Airy/refraksi)", e.moon_altitude_airy_geo, e.moon_altitude_airy_topo);
-    S("32", "Koreksi Refraksi Bulan", dms(e.moon_refraction));
-    S("33", "Horizontal Parallax Matahari", dms(e.sun_horizontal_parallax));
-    S("34", "Horizontal Parallax Bulan", dms(e.moon_horizontal_parallax));
-    sec("Data Bulan (Hilal)");
-    rows.push(["35", "Umur Bulan", hms(e.moon_age_hours_geo), hms(e.moon_age_hours_topo), ""]);
-    A("36", "Elongasi", e.elongation_geo, e.elongation_topo);
-    rows.push(["37", "Kecerlangan (Iluminasi)", num(e.illumination_geo, 2) + "%", num(e.illumination_topo, 2) + "%", ""]);
-    rows.push(["38", "Lebar Sabit", num(e.crescent_width_geo, 2) + "'", num(e.crescent_width_topo, 2) + "'", ""]);
-    A("39", "Tinggi Piringan Atas", e.upper_limb_altitude_geo, e.upper_limb_altitude_topo);
-    A("40", "Tinggi Pusat Piringan", e.center_altitude_geo, e.center_altitude_topo);
-    A("41", "Tinggi Piringan Bawah", e.lower_limb_altitude_geo, e.lower_limb_altitude_topo);
-    A("42", "Tinggi Relatif", e.relative_altitude_geo, e.relative_altitude_topo);
-    A("43", "Azimuth Relatif", e.relative_azimuth_geo, e.relative_azimuth_topo);
-    A("44", "Sudut Fase", e.phase_angle_geo, e.phase_angle_topo);
-    rows.push(["45", "Arah Hilal", e.arah_hilal_geo || "—", e.arah_hilal_topo || "—", ""]);
-    rows.push(["46", "Kedudukan Hilal", e.kedudukan_hilal_geo || "—", e.kedudukan_hilal_topo || "—", ""]);
+    const cell = (v) => `<td class="text-right font-mono">${v}</td>`;
+    const rowHTML = (r) => {
+      const tag = r[0], no = r[1], label = r[2];
+      let g = "", t = "", sel = "";
+      if (tag === "A") { g = dms(r[3]); t = dms(r[4]); sel = diffDMS(r[3], r[4]); }
+      else if (tag === "R") { g = ra2hms(r[3]); t = ra2hms(r[4]); sel = diffHMSra(r[3], r[4]); }
+      else if (tag === "S") { g = r[3]; }
+      else if (tag === "P") { g = r[3]; t = r[4]; sel = r[5] || ""; }
+      return `<tr>
+        <td class="text-base-content/40 w-8">${no}</td>
+        <td class="font-medium">${label}</td>
+        ${cell(g)}${cell(t)}
+        <td class="text-right font-mono text-base-content/60">${sel}</td>
+      </tr>`;
+    };
 
-    const tbody = document.getElementById("ephemeris-rows");
-    if (tbody) tbody.innerHTML = rows.map((r) => {
-      if (r[0] === "sec") return `<tr class="bg-base-200/60"><td colspan="5" class="font-semibold">${r[1]}</td></tr>`;
-      const [no, k, g, t, sel] = r;
-      return `<tr><td class="text-base-content/50">${no}</td><td>${k}</td>` +
-        `<td class="text-right font-mono">${g}</td><td class="text-right font-mono">${t}</td>` +
-        `<td class="text-right font-mono text-base-content/60">${sel || ""}</td></tr>`;
-    }).join("");
+    const sectionHTML = (s) => `
+      <div class="card glass-panel border border-base-300/60 overflow-hidden">
+        <div class="px-4 py-2.5 font-bold text-sm uppercase tracking-wide flex items-center gap-2 border-b border-base-300/60 bg-base-300/40 text-primary">
+          ${s.icon}<span>${s.title}</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm w-full">
+            <thead><tr class="text-xs">
+              <th class="w-8">No</th><th>Parameter</th>
+              <th class="text-right">Geosentrik</th>
+              <th class="text-right">Toposentrik</th>
+              <th class="text-right">Selisih</th>
+            </tr></thead>
+            <tbody>${s.rows.map(rowHTML).join("")}</tbody>
+          </table>
+        </div>
+      </div>`;
+
+    const host = document.getElementById("ephemeris-sections");
+    if (host) host.innerHTML = sections.map(sectionHTML).join("");
 
     const badge = document.getElementById("eph-engine-badge");
     if (badge) badge.textContent = e.engine || "";
@@ -651,14 +694,21 @@
   if (btnPDF) btnPDF.addEventListener("click", () => {
     if (!lastData) return;
     const L = lastData.location, D = lastData.date;
-    const tbl = document.getElementById("ephemeris-rows");
     const engine = (lastDetailed && lastDetailed.engine) || "Classic (Meeus)";
+    // Kumpulkan tiap section (banner judul + tabelnya) untuk PDF.
+    const host = document.getElementById("ephemeris-sections");
+    let body = "";
+    if (host) host.querySelectorAll(".card").forEach((card) => {
+      const title = (card.querySelector(".font-bold span") || {}).textContent || "";
+      const tbl = card.querySelector("table");
+      body += `<h2 style="font-size:13px;margin:10px 0 4px;border-bottom:2px solid #495b7d;padding-bottom:2px">${title}</h2>` +
+        (tbl ? tbl.outerHTML : "");
+    });
     const html = `
       <h1 style="font-size:18px">DATA HILAL — Al Falak DPUA</h1>
       <p style="font-size:12px;margin:2px 0">Lokasi: ${escapeHtml(form.loc_name.value || "")} (${L.latitude}, ${L.longitude}) · elev ${L.elevation} m · UTC${L.timezone >= 0 ? "+" : ""}${L.timezone}</p>
       <p style="font-size:12px;margin:2px 0">Tanggal: ${D.day}/${D.month}/${D.year} · Metode: ${engine}</p>
-      <table><thead><tr><th>No</th><th>Parameter</th><th>Geosentrik</th><th>Toposentrik</th><th>Selisih</th></tr></thead>
-      <tbody>${tbl ? tbl.innerHTML : ""}</tbody></table>`;
+      ${body}`;
     window.printArea(html, "DATA HILAL");
   });
 
