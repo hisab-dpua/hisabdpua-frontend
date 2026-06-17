@@ -37,7 +37,21 @@
             <input type="number" step="any" name="elevation" class="input input-bordered input-sm" value="10" required></label>
           <label class="form-control"><span class="label-text">Zona Waktu (UTC±)</span>
             <input type="number" step="any" name="timezone" class="input input-bordered input-sm" value="7" required></label>
+          <label class="form-control"><span class="label-text">Suhu (°C)</span>
+            <input type="number" step="any" name="temperature" class="input input-bordered input-sm" value="10" title="Suhu udara untuk koreksi refraksi (default 10°C, sesuai Al Falak DPUA)"></label>
+          <label class="form-control"><span class="label-text">Tekanan (mb)</span>
+            <input type="number" step="any" name="pressure" class="input input-bordered input-sm" value="1010" title="Tekanan udara untuk koreksi refraksi (default 1010 mb)"></label>
         </div>
+      </fieldset>
+
+      <!-- METODE HITUNG -->
+      <fieldset class="border border-base-300 rounded-lg p-3">
+        <legend class="text-sm font-semibold px-1">Metode Perhitungan</legend>
+        <div class="join">
+          <button type="button" id="eng-classic" class="btn btn-xs join-item btn-active">Classic (Meeus)</button>
+          <button type="button" id="eng-modern" class="btn btn-xs join-item">Modern (Astronomy-Engine)</button>
+        </div>
+        <p class="text-xs text-base-content/60 mt-2">Classic: algoritma Jean Meeus, paritas penuh dengan Al Falak DPUA (VB6). Modern: Astronomy-Engine (presisi tinggi).</p>
       </fieldset>
 
       <!-- TANGGAL -->
@@ -106,15 +120,24 @@
         </div>
       </div>
 
-      <!-- Tabel ephemeris penuh -->
+      <!-- Tabel ephemeris penuh (DATA HILAL — meniru Al Falak DPUA) -->
       <div class="card bg-base-100 shadow p-4">
-        <h2 class="card-title text-base mb-2">Data Ephemeris Lengkap</h2>
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+          <h2 class="card-title text-base">Data Ephemeris Lengkap</h2>
+          <span id="eph-engine-badge" class="badge badge-outline badge-sm"></span>
+        </div>
         <div class="overflow-x-auto">
           <table class="table table-xs">
-            <thead><tr><th>Parameter</th><th class="text-right">Geosentrik</th><th class="text-right">Toposentrik</th></tr></thead>
+            <thead><tr>
+              <th class="w-10">No</th><th>Parameter</th>
+              <th class="text-right">Geosentrik</th>
+              <th class="text-right">Toposentrik</th>
+              <th class="text-right">Selisih</th>
+            </tr></thead>
             <tbody id="ephemeris-rows"></tbody>
           </table>
         </div>
+        <p id="eph-notes" class="text-xs text-base-content/60 mt-2 space-y-1"></p>
       </div>
 
       <!-- Kriteria detail -->

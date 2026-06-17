@@ -13,7 +13,9 @@
   const form = document.getElementById("alfalak-hilal-form");
   const statusEl = document.getElementById("status");
   const resultsEl = document.getElementById("results");
-  let lastData = null; // simpan untuk export
+  let lastData = null;     // hilal response (export)
+  let lastDetailed = null; // detailed ephemeris (tabel lengkap)
+  let engineMode = "classic"; // classic | modern
 
   // ===== Pemilih kota dari database (GET /api/cities) — bisa di-CRUD admin =====
   const cityMap = {}; // "Nama — Negara" → {name,country,lat,lon,tz,elevation}
@@ -86,6 +88,19 @@
     } catch (_) { calHint.textContent = "(konversi butuh backend)"; }
     calMode = "hijri"; btnHijri.classList.add("btn-active"); btnGreg.classList.remove("btn-active");
   });
+
+  // ===== Toggle metode hitung Classic ↔ Modern =====
+  const btnEngClassic = document.getElementById("eng-classic");
+  const btnEngModern = document.getElementById("eng-modern");
+  function setEngine(mode) {
+    if (engineMode === mode) return;
+    engineMode = mode;
+    if (btnEngClassic) btnEngClassic.classList.toggle("btn-active", mode === "classic");
+    if (btnEngModern) btnEngModern.classList.toggle("btn-active", mode === "modern");
+    if (lastData) form.requestSubmit(); // hitung ulang dengan metode baru
+  }
+  if (btnEngClassic) btnEngClassic.addEventListener("click", () => setEngine("classic"));
+  if (btnEngModern) btnEngModern.addEventListener("click", () => setEngine("modern"));
 
   // ---------- format helper ----------
   function setStatus(kind, msg) {
@@ -250,48 +265,90 @@
 
   // ---------- tabel ephemeris penuh ----------
   function gt(row, fmt) { return [fmt(row.geo), fmt(row.topo)]; }
+  // Tabel DATA HILAL lengkap (meniru Al Falak DPUA) — konsumsi DetailedEphemeris.
+  function diffDMS(g, t) { return (g == null || t == null || isNaN(g) || isNaN(t)) ? "" : dms(t - g); }
+  function diffHMSra(g, t) { return (g == null || t == null) ? "" : ra2hms(t - g); }
   function renderEphemeris(e) {
-    // [label, geoStr, topoStr]; null geo/topo → kolom kosong (single value).
     const rows = [];
-    const push = (label, geo, topo) => rows.push([label, geo ?? "", topo ?? ""]);
-    const pair = (label, obj, fmt) => { const [g, t] = gt(obj, fmt); push(label, g, t); };
+    const sec = (title) => rows.push(["sec", title]);
+    const A = (no, label, g, t) => rows.push([no, label, dms(g), dms(t), diffDMS(g, t)]);
+    const R = (no, label, g, t) => rows.push([no, label, ra2hms(g), ra2hms(t), diffHMSra(g, t)]);
+    const S = (no, label, val) => rows.push([no, label, val, "", ""]);
 
-    push("Julian Date (JD)", num(e.jd, 6), "");
-    push("Delta T", num(e.delta_t, 2) + " dtk", "");
-    push("Konjungsi (Ijtima') JD", num(e.conjunction_jd, 6), "");
-    push("Jarak Matahari", num(e.sun_dist_km, 3) + " km", "");
-    push("Jarak Bulan", num(e.moon_dist_km, 3) + " km", "");
-    push("— Koordinat Ekliptika —", "", "");
-    pair("Bujur Matahari", e.sun_longitude, dms);
-    pair("Lintang Matahari", e.sun_latitude, dms);
-    pair("Bujur Bulan", e.moon_longitude, dms);
-    pair("Lintang Bulan", e.moon_latitude, dms);
-    push("— Koordinat Ekuator —", "", "");
-    pair("Deklinasi Matahari", e.sun_dec, dms);
-    pair("Asensiorekta Matahari", e.sun_ra, ra2hms);
-    pair("Deklinasi Bulan", e.moon_dec, dms);
-    pair("Asensiorekta Bulan", e.moon_ra, ra2hms);
-    push("— Koordinat Horizon —", "", "");
-    pair("Tinggi Matahari", e.sun_altitude, dms);
-    pair("Azimuth Matahari", e.sun_azimuth, dms);
-    pair("Tinggi Bulan", e.moon_altitude, dms);
-    pair("Azimuth Bulan", e.moon_azimuth, dms);
-    push("— Koreksi —", "", "");
-    push("Nutasi Bujur", num(e.nutation_long_arcsec, 2) + '"', "");
-    push("Nutasi Kemiringan", num(e.nutation_obl_arcsec, 2) + '"', "");
-    push("Parallax Matahari", dms(e.sun_hparallax_deg), "");
-    push("Parallax Bulan", dms(e.moon_hparallax_deg), "");
-    push("— Data Hilal —", "", "");
-    pair("Elongasi", e.elongation, dms);
-    push("Umur Bulan", hms(e.moon_age_hours), "");
-    push("Iluminasi", num(e.illumination_pct, 3) + "%", "");
-    push("Lebar Sabit", num(e.crescent_width_arcmin, 3) + "'", "");
+    sec("Koordinat Ekliptika");
+    S("1", "Ijtima' (Konjungsi)", e.conjunction_date || "—");
+    rows.push(["", "— toposentrik", "", e.conjunction_date_topo || "—", e.conjunction_diff || ""]);
+    A("2", "Semidiameter Matahari", e.sun_semidiameter_deg, e.sun_semidiameter_deg);
+    A("3", "Semidiameter Bulan", e.moon_semidiameter_deg, e.moon_semidiameter_deg);
+    A("4", "Bujur Ekliptika Matahari", e.sun_longitude_geo, e.sun_longitude_topo);
+    A("5", "Lintang Ekliptika Matahari", e.sun_latitude_geo, e.sun_latitude_topo);
+    A("6", "Bujur Ekliptika Bulan", e.moon_longitude_geo, e.moon_longitude_topo);
+    A("7", "Lintang Ekliptika Bulan", e.moon_latitude_geo, e.moon_latitude_topo);
+    sec("Koreksi Apparent");
+    S("8a", "Nutasi Sepanjang Bujur", num(e.nutation_longitude * 3600, 2) + '"');
+    S("8b", "Nutasi Kemiringan Ekliptika", num(e.nutation_obliquity * 3600, 2) + '"');
+    S("8c", "Aberasi Matahari", num(e.sun_aberration * 3600, 2) + '"');
+    A("9", "Bujur Ekliptika Matahari (Tampak)", e.sun_longitude_apparent_geo, e.sun_longitude_apparent_topo);
+    A("10", "Lintang Ekliptika Matahari (Tampak)", e.sun_latitude_apparent_geo, e.sun_latitude_apparent_topo);
+    A("11", "Bujur Ekliptika Bulan (Tampak)", e.moon_longitude_apparent_geo, e.moon_longitude_apparent_topo);
+    A("12", "Lintang Ekliptika Bulan (Tampak)", e.moon_latitude_apparent_geo, e.moon_latitude_apparent_topo);
+    sec("Koordinat Ekuator");
+    A("13", "Deklinasi Matahari", e.sun_dec_geo, e.sun_dec_topo);
+    R("14", "Asensiorekta Matahari", e.sun_ra_geo, e.sun_ra_topo);
+    A("15", "Deklinasi Bulan", e.moon_dec_geo, e.moon_dec_topo);
+    R("16", "Asensiorekta Bulan", e.moon_ra_geo, e.moon_ra_topo);
+    A("17", "Deklinasi Matahari (Tampak)", e.sun_dec_apparent_geo, e.sun_dec_apparent_topo);
+    R("18", "Asensiorekta Matahari (Tampak)", e.sun_ra_apparent_geo, e.sun_ra_apparent_topo);
+    A("19", "Deklinasi Bulan (Tampak)", e.moon_dec_apparent_geo, e.moon_dec_apparent_topo);
+    R("20", "Asensiorekta Bulan (Tampak)", e.moon_ra_apparent_geo, e.moon_ra_apparent_topo);
+    sec("Koordinat Horizon");
+    A("21", "Tinggi Matahari", e.sun_altitude_airless_geo, e.sun_altitude_airless_topo);
+    A("22", "Azimuth Matahari", e.sun_azimuth_airless_geo, e.sun_azimuth_airless_topo);
+    A("23", "Tinggi Bulan", e.moon_altitude_airless_geo, e.moon_altitude_airless_topo);
+    A("24", "Azimuth Bulan", e.moon_azimuth_airless_geo, e.moon_azimuth_airless_topo);
+    A("25", "Tinggi Matahari (Tampak)", e.sun_altitude_apparent_airless_geo, e.sun_altitude_apparent_airless_topo);
+    A("26", "Azimuth Matahari (Tampak)", e.sun_azimuth_apparent_airless_geo, e.sun_azimuth_apparent_airless_topo);
+    A("27", "Tinggi Bulan (Tampak)", e.moon_altitude_apparent_airless_geo, e.moon_altitude_apparent_airless_topo);
+    A("28", "Azimuth Bulan (Tampak)", e.moon_azimuth_apparent_airless_geo, e.moon_azimuth_apparent_airless_topo);
+    A("29", "Tinggi Matahari (Airy/refraksi)", e.sun_altitude_airy_geo, e.sun_altitude_airy_topo);
+    S("30", "Koreksi Refraksi Matahari", dms(e.sun_refraction));
+    A("31", "Tinggi Bulan (Airy/refraksi)", e.moon_altitude_airy_geo, e.moon_altitude_airy_topo);
+    S("32", "Koreksi Refraksi Bulan", dms(e.moon_refraction));
+    S("33", "Horizontal Parallax Matahari", dms(e.sun_horizontal_parallax));
+    S("34", "Horizontal Parallax Bulan", dms(e.moon_horizontal_parallax));
+    sec("Data Bulan (Hilal)");
+    rows.push(["35", "Umur Bulan", hms(e.moon_age_hours_geo), hms(e.moon_age_hours_topo), ""]);
+    A("36", "Elongasi", e.elongation_geo, e.elongation_topo);
+    rows.push(["37", "Kecerlangan (Iluminasi)", num(e.illumination_geo, 2) + "%", num(e.illumination_topo, 2) + "%", ""]);
+    rows.push(["38", "Lebar Sabit", num(e.crescent_width_geo, 2) + "'", num(e.crescent_width_topo, 2) + "'", ""]);
+    A("39", "Tinggi Piringan Atas", e.upper_limb_altitude_geo, e.upper_limb_altitude_topo);
+    A("40", "Tinggi Pusat Piringan", e.center_altitude_geo, e.center_altitude_topo);
+    A("41", "Tinggi Piringan Bawah", e.lower_limb_altitude_geo, e.lower_limb_altitude_topo);
+    A("42", "Tinggi Relatif", e.relative_altitude_geo, e.relative_altitude_topo);
+    A("43", "Azimuth Relatif", e.relative_azimuth_geo, e.relative_azimuth_topo);
+    A("44", "Sudut Fase", e.phase_angle_geo, e.phase_angle_topo);
+    rows.push(["45", "Arah Hilal", e.arah_hilal_geo || "—", e.arah_hilal_topo || "—", ""]);
+    rows.push(["46", "Kedudukan Hilal", e.kedudukan_hilal_geo || "—", e.kedudukan_hilal_topo || "—", ""]);
 
-    document.getElementById("ephemeris-rows").innerHTML = rows.map(([k, g, t]) => {
-      const header = g === "" && t === "";
-      if (header) return `<tr class="bg-base-200/60"><td colspan="3" class="font-semibold">${k}</td></tr>`;
-      return `<tr><td>${k}</td><td class="text-right font-mono">${g}</td><td class="text-right font-mono">${t}</td></tr>`;
+    const tbody = document.getElementById("ephemeris-rows");
+    if (tbody) tbody.innerHTML = rows.map((r) => {
+      if (r[0] === "sec") return `<tr class="bg-base-200/60"><td colspan="5" class="font-semibold">${r[1]}</td></tr>`;
+      const [no, k, g, t, sel] = r;
+      return `<tr><td class="text-base-content/50">${no}</td><td>${k}</td>` +
+        `<td class="text-right font-mono">${g}</td><td class="text-right font-mono">${t}</td>` +
+        `<td class="text-right font-mono text-base-content/60">${sel || ""}</td></tr>`;
     }).join("");
+
+    const badge = document.getElementById("eph-engine-badge");
+    if (badge) badge.textContent = e.engine || "";
+    const notes = document.getElementById("eph-notes");
+    if (notes) {
+      const parts = [];
+      if (e.semidiameter_note) parts.push("• " + e.semidiameter_note);
+      if (e.altitude_note) parts.push("• " + e.altitude_note);
+      if (e.ephemeris_note) parts.push("• " + e.ephemeris_note);
+      notes.innerHTML = parts.map((p) => `<span class="block">${p}</span>`).join("");
+    }
   }
 
   // ---------- kriteria detail ----------
@@ -388,14 +445,22 @@
       latitude: parseFloat(fd.get("latitude")), longitude: parseFloat(fd.get("longitude")),
       elevation: parseFloat(fd.get("elevation")), timezone: parseFloat(fd.get("timezone")),
       year: y, month: m, day: d,
+      temperature: parseFloat(fd.get("temperature")) || 0,
+      pressure: parseFloat(fd.get("pressure")) || 0,
     };
+    const post = (path, b) => fetch(window.API_BASE + path, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b),
+    });
     try {
-      const res = await fetch(window.API_BASE + "/api/alfalak/hilal", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      });
+      // hilal → ringkasan/kriteria ; ephemeris → tabel detail lengkap (per engine)
+      const [res, ephRes] = await Promise.all([
+        post("/api/alfalak/hilal", body),
+        post("/api/alfalak/ephemeris", { ...body, engine: engineMode }),
+      ]);
       if (!res.ok) { const err = await res.json().catch(() => ({})); setStatus("error", "Gagal: " + (err.error || res.status)); return; }
       const data = await res.json();
       lastData = data;
+      lastDetailed = ephRes.ok ? (await ephRes.json()).ephemeris : null;
       clearStatus();
       renderVerdict(data);
       renderBasicInfo(data, body);
@@ -403,7 +468,7 @@
       renderSunData(data.ephemeris);
       renderSummary(data.ephemeris);
       renderMoon(data.ephemeris);
-      renderEphemeris(data.ephemeris);
+      if (lastDetailed) renderEphemeris(lastDetailed);
       renderCriteria(data.criteria, data.criteria_detailed);
       resultsEl.classList.remove("hidden");
     } catch (err) {
