@@ -114,36 +114,59 @@
   }
   const num = (v, d = 3) => (v == null || isNaN(v)) ? "—" : Number(v).toFixed(d);
 
-  // ---------- ringkasan ----------
+  // ---------- ringkasan (kartu stat dgn aksen) ----------
   function renderSummary(e) {
     const items = [
-      ["Matahari terbenam", hms(e.sunset_local) + " WD"],
-      ["Bulan terbenam", hms(e.moonset_local) + " WD"],
-      ["Lag time", hms(e.lag_time)],
-      ["Umur bulan", hms(e.moon_age_hours)],
-      ["Tinggi bulan (topo)", dms(e.moon_altitude.topo)],
-      ["Elongasi (topo)", dms(e.elongation.topo)],
-      ["Lebar sabit", num(e.crescent_width_arcmin, 3) + "'"],
-      ["Iluminasi", num(e.illumination_pct, 3) + "%"],
-      ["Delta T", num(e.delta_t, 2) + " dtk"],
+      ["Matahari terbenam", hms(e.sunset_local), "WD", "primary"],
+      ["Bulan terbenam", hms(e.moonset_local), "WD", "primary"],
+      ["Lag time", hms(e.lag_time), "", "secondary"],
+      ["Umur bulan", hms(e.moon_age_hours), "", "secondary"],
+      ["Tinggi bulan (topo)", dms(e.moon_altitude.topo), "", "accent"],
+      ["Elongasi (topo)", dms(e.elongation.topo), "", "accent"],
+      ["Lebar sabit", num(e.crescent_width_arcmin, 3), "'", "accent"],
+      ["Iluminasi", num(e.illumination_pct, 3), "%", "accent"],
+      ["Delta T", num(e.delta_t, 2), "dtk", "neutral"],
     ];
-    document.getElementById("summary-grid").innerHTML = items.map(([k, v]) =>
-      `<div class="flex flex-col border rounded p-2 bg-base-200/40"><span class="text-base-content/60">${k}</span><span class="font-mono font-semibold">${v}</span></div>`).join("");
+    document.getElementById("summary-grid").innerHTML = items.map(([k, v, u, c]) =>
+      `<div class="rounded-lg p-3 bg-base-200/50 border-l-4 border-${c}">
+        <div class="text-xs text-base-content/60">${k}</div>
+        <div class="font-mono font-semibold text-base">${v}<span class="text-xs text-base-content/50 ml-1">${u}</span></div>
+      </div>`).join("");
   }
 
-  // ---------- visualisasi sabit (SVG) ----------
+  // ---------- visualisasi sabit (SVG realistis: glow + bintang) ----------
   function renderMoon(e) {
     const illum = Math.max(0, Math.min(1, (e.illumination_pct || 0) / 100));
-    // Terangi sisi sesuai elongasi; bentuk sabit pakai dua busur.
-    const R = 70, cx = 80, cy = 80;
-    // lebar bagian terang: k = illum (0=baru, 1=purnama). Sabit muda → tipis.
-    const x = (1 - 2 * illum) * R; // pusat busur terminator
+    const R = 64, cx = 80, cy = 80;
+    const x = (1 - 2 * illum) * R;
     const sweep = illum < 0.5 ? 0 : 1;
-    const dark = "#1f2937", light = "#fde68a";
+    // Bintang latar (acak tapi deterministik).
+    let stars = "";
+    const seed = [13, 29, 41, 7, 53, 19, 37, 5, 61, 23, 47, 11];
+    for (let i = 0; i < 12; i++) {
+      const sx = (seed[i] * 37) % 160, sy = (seed[(i + 3) % 12] * 53) % 160;
+      const r = (i % 3 === 0) ? 1.2 : 0.7;
+      stars += `<circle cx="${sx}" cy="${sy}" r="${r}" fill="#cbd5e1" opacity="0.5"/>`;
+    }
     const svg = `
-    <svg width="160" height="160" viewBox="0 0 160 160">
-      <circle cx="${cx}" cy="${cy}" r="${R}" fill="${dark}" stroke="#374151"/>
-      <path d="M ${cx} ${cy - R} A ${R} ${R} 0 0 1 ${cx} ${cy + R} A ${Math.abs(x)} ${R} 0 0 ${sweep} ${cx} ${cy - R} Z" fill="${light}"/>
+    <svg width="170" height="170" viewBox="0 0 160 160">
+      <defs>
+        <radialGradient id="sky" cx="50%" cy="50%" r="75%">
+          <stop offset="0%" stop-color="#0f172a"/>
+          <stop offset="100%" stop-color="#020617"/>
+        </radialGradient>
+        <radialGradient id="lit" cx="35%" cy="35%" r="70%">
+          <stop offset="0%" stop-color="#fffbe6"/>
+          <stop offset="70%" stop-color="#fde68a"/>
+          <stop offset="100%" stop-color="#f59e0b"/>
+        </radialGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <rect width="160" height="160" rx="14" fill="url(#sky)"/>
+      ${stars}
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="#111827"/>
+      <path filter="url(#glow)" d="M ${cx} ${cy - R} A ${R} ${R} 0 0 1 ${cx} ${cy + R} A ${Math.abs(x)} ${R} 0 0 ${sweep} ${cx} ${cy - R} Z" fill="url(#lit)"/>
     </svg>`;
     document.getElementById("moon-viz").innerHTML = svg;
     document.getElementById("moon-viz-caption").textContent =
