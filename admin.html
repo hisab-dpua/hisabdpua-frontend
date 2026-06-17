@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin — CRUD Kota</title>
+<title>Admin — Al Falak DPUA</title>
 <script src="assets/theme.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -13,83 +13,146 @@
   <div id="app-nav"></div>
 
   <main class="container mx-auto p-4 max-w-6xl">
-    <h1 class="text-2xl font-bold mb-1">Admin — Kelola Kota</h1>
-    <p class="text-sm text-base-content/70 mb-4">CRUD daftar kota. Centang <b>is_default</b> untuk masuk laporan multi-kota default.</p>
+    <h1 class="text-2xl font-bold mb-1">Panel Admin</h1>
+    <p class="text-sm text-base-content/70 mb-4">Kelola pengguna dan daftar kota laporan.</p>
 
     <div id="forbidden" class="hidden alert alert-error">
       Hanya admin yang bisa akses halaman ini.
     </div>
 
     <div id="admin-content" class="hidden">
-      <!-- Pending users -->
-      <div class="card bg-base-100 shadow p-6 mb-6">
-        <h2 class="text-lg font-bold mb-3">User Menunggu Approval (<span id="pending-count">0</span>)</h2>
-        <div id="pending-empty" class="hidden text-sm text-base-content/60">Tidak ada user pending.</div>
-        <div class="overflow-x-auto">
-          <table class="table table-zebra table-sm" id="pending-table">
-            <thead>
-              <tr><th>Nama</th><th>Email</th><th>Daftar</th><th>Aksi</th></tr>
-            </thead>
-            <tbody id="pending-body"></tbody>
-          </table>
-        </div>
+      <!-- Dashboard ringkas -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="stats shadow bg-base-100"><div class="stat p-3">
+          <div class="stat-title text-xs">Total User</div>
+          <div class="stat-value text-2xl" id="stat-users">—</div>
+          <div class="stat-desc text-xs" id="stat-admins"></div>
+        </div></div>
+        <div class="stats shadow bg-base-100"><div class="stat p-3">
+          <div class="stat-title text-xs">Menunggu Approval</div>
+          <div class="stat-value text-2xl text-warning" id="stat-pending">—</div>
+          <div class="stat-desc text-xs">perlu tindakan</div>
+        </div></div>
+        <div class="stats shadow bg-base-100"><div class="stat p-3">
+          <div class="stat-title text-xs">Total Kota</div>
+          <div class="stat-value text-2xl" id="stat-cities">—</div>
+          <div class="stat-desc text-xs" id="stat-default-cities"></div>
+        </div></div>
+        <div class="stats shadow bg-base-100"><div class="stat p-3">
+          <div class="stat-title text-xs">Pendaftaran Terakhir</div>
+          <div class="stat-value text-sm" id="stat-last-reg">—</div>
+          <div class="stat-desc text-xs truncate" id="stat-last-name"></div>
+        </div></div>
       </div>
 
-      <!-- All users -->
-      <div class="card bg-base-100 shadow p-6 mb-6">
-        <h2 class="text-lg font-bold mb-3">Semua User (<span id="users-count">0</span>)</h2>
-        <div class="overflow-x-auto">
-          <table class="table table-zebra table-sm">
-            <thead>
-              <tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Daftar</th><th>Aksi</th></tr>
-            </thead>
-            <tbody id="users-body"></tbody>
-          </table>
-        </div>
+      <!-- Tab -->
+      <div role="tablist" class="tabs tabs-boxed mb-4 w-fit">
+        <a role="tab" class="tab tab-active" id="tab-users">Pengguna</a>
+        <a role="tab" class="tab" id="tab-cities">Kota</a>
       </div>
 
-      <!-- Tambah kota -->
-      <div class="card bg-base-100 shadow p-6 mb-6">
-        <h2 class="text-lg font-bold mb-3">Tambah Kota</h2>
-        <form id="create-form" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input name="name" placeholder="Nama (mis. Surabaya)" class="input input-bordered input-sm" required>
-          <input name="country" placeholder="Negara" value="Indonesia" class="input input-bordered input-sm" required>
-          <input name="lat" type="number" step="any" placeholder="Lintang (lat)" class="input input-bordered input-sm" required>
-          <input name="lon" type="number" step="any" placeholder="Bujur (lon)" class="input input-bordered input-sm" required>
-          <input name="tz" type="number" step="any" placeholder="TZ (UTC offset)" value="7" class="input input-bordered input-sm" required>
-          <input name="elevation" type="number" step="any" placeholder="Elevasi (mdpl)" value="0" min="0" class="input input-bordered input-sm">
-          <input name="order" type="number" placeholder="Urutan (1-99)" value="99" class="input input-bordered input-sm">
-          <label class="label cursor-pointer gap-2 md:col-span-2">
-            <input type="checkbox" name="is_default" class="checkbox checkbox-sm">
-            <span class="label-text">Masuk daftar default (16 kota)</span>
-          </label>
-          <button type="submit" class="btn btn-primary btn-sm">Tambah</button>
-          <p id="create-msg" class="text-sm md:col-span-3"></p>
-        </form>
-      </div>
-
-      <!-- Daftar kota -->
-      <div class="card bg-base-100 shadow p-6">
-        <h2 class="text-lg font-bold mb-3">Daftar Kota (<span id="cities-count">0</span>)</h2>
-        <div class="overflow-x-auto">
-          <table class="table table-zebra table-sm">
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Nama</th>
-                <th>Negara</th>
-                <th>Lat</th>
-                <th>Lon</th>
-                <th>TZ</th>
-                <th>Elevasi</th>
-                <th>Default?</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="cities-body"></tbody>
-          </table>
+      <!-- ====== PANEL PENGGUNA ====== -->
+      <section id="panel-users">
+        <!-- Pending users -->
+        <div class="card bg-base-100 shadow p-5 mb-6">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <h2 class="text-lg font-bold">Menunggu Approval (<span id="pending-count">0</span>)</h2>
+            <button id="approve-all" class="btn btn-success btn-xs hidden">Approve Semua</button>
+          </div>
+          <div id="pending-empty" class="hidden text-sm text-base-content/60">Tidak ada user pending.</div>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm" id="pending-table">
+              <thead><tr><th>Nama</th><th>Email</th><th>Daftar</th><th class="text-right">Aksi</th></tr></thead>
+              <tbody id="pending-body"></tbody>
+            </table>
+          </div>
         </div>
-      </div>
+
+        <!-- All users -->
+        <div class="card bg-base-100 shadow p-5">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <h2 class="text-lg font-bold">Semua User (<span id="users-count">0</span>)</h2>
+            <div class="flex gap-2 flex-wrap">
+              <input id="user-search" type="search" placeholder="Cari nama/email…" class="input input-bordered input-sm w-48">
+              <select id="user-filter" class="select select-bordered select-sm" title="Filter status user" aria-label="Filter status user">
+                <option value="">Semua status</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+              <thead>
+                <tr>
+                  <th class="cursor-pointer" data-sort="name">Nama</th>
+                  <th class="cursor-pointer" data-sort="email">Email</th>
+                  <th>Role</th><th>Status</th>
+                  <th class="cursor-pointer" data-sort="created_at">Daftar</th>
+                  <th class="text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="users-body"></tbody>
+            </table>
+          </div>
+          <p id="users-empty" class="hidden text-sm text-base-content/60 mt-2">Tidak ada user yang cocok.</p>
+        </div>
+      </section>
+
+      <!-- ====== PANEL KOTA ====== -->
+      <section id="panel-cities" class="hidden">
+        <!-- Tambah kota -->
+        <div class="card bg-base-100 shadow p-5 mb-6">
+          <h2 class="text-lg font-bold mb-3">Tambah Kota</h2>
+          <form id="create-form" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input name="name" placeholder="Nama (mis. Surabaya)" class="input input-bordered input-sm" required>
+            <input name="country" placeholder="Negara" value="Indonesia" class="input input-bordered input-sm" required>
+            <input name="lat" type="number" step="any" placeholder="Lintang (lat)" class="input input-bordered input-sm" required>
+            <input name="lon" type="number" step="any" placeholder="Bujur (lon)" class="input input-bordered input-sm" required>
+            <input name="tz" type="number" step="any" placeholder="TZ (UTC offset)" value="7" class="input input-bordered input-sm" required>
+            <input name="elevation" type="number" step="any" placeholder="Elevasi (mdpl)" value="0" min="0" class="input input-bordered input-sm">
+            <input name="order" type="number" placeholder="Urutan (1-99)" value="99" class="input input-bordered input-sm">
+            <label class="label cursor-pointer gap-2 md:col-span-2">
+              <input type="checkbox" name="is_default" class="checkbox checkbox-sm">
+              <span class="label-text">Masuk daftar default</span>
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm">Tambah</button>
+          </form>
+        </div>
+
+        <!-- Daftar kota -->
+        <div class="card bg-base-100 shadow p-5">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <h2 class="text-lg font-bold">Daftar Kota (<span id="cities-count">0</span>)</h2>
+            <div class="flex gap-2 flex-wrap items-center">
+              <input id="city-search" type="search" placeholder="Cari kota/negara…" class="input input-bordered input-sm w-44">
+              <label class="label cursor-pointer gap-1 py-0">
+                <input type="checkbox" id="city-default-only" class="checkbox checkbox-xs">
+                <span class="label-text text-xs">Default saja</span>
+              </label>
+              <button type="button" id="city-export" class="btn btn-outline btn-xs">Ekspor CSV</button>
+              <label class="btn btn-outline btn-xs">Impor CSV<input id="city-import" type="file" accept=".csv" class="hidden"></label>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+              <thead>
+                <tr>
+                  <th class="cursor-pointer" data-csort="order">Order</th>
+                  <th class="cursor-pointer" data-csort="name">Nama</th>
+                  <th class="cursor-pointer" data-csort="country">Negara</th>
+                  <th>Lat</th><th>Lon</th><th>TZ</th><th>Elevasi</th>
+                  <th class="cursor-pointer" data-csort="is_default">Default?</th>
+                  <th class="text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="cities-body"></tbody>
+            </table>
+          </div>
+          <p id="cities-empty" class="hidden text-sm text-base-content/60 mt-2">Tidak ada kota yang cocok.</p>
+        </div>
+      </section>
     </div>
   </main>
 

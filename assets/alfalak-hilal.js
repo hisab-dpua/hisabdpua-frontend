@@ -263,7 +263,73 @@
       `Iluminasi ${num(e.illumination_pct, 2)}% · umur ${hms(e.moon_age_hours)}`;
   }
 
+  // ---------- diagram ufuk (Matahari & Bulan saat magrib) ----------
+  // Memakai DetailedEphemeris (azimuth & tinggi toposentrik tampak). Sumbu-x:
+  // azimuth (°), dipusatkan di rata-rata; sumbu-y: tinggi (°). Garis ufuk di 0°.
+  function renderHorizon(d) {
+    const host = document.getElementById("horizon-viz");
+    const cap = document.getElementById("horizon-caption");
+    if (!host) return;
+    if (!d) { host.innerHTML = ""; if (cap) cap.textContent = ""; return; }
+    const sunAz = d.sun_azimuth_apparent_airless_topo ?? d.sun_azimuth_airless_topo;
+    const moonAz = d.moon_azimuth_apparent_airless_topo ?? d.moon_azimuth_airless_topo;
+    const sunAlt = d.sun_altitude_apparent_airless_topo ?? d.sun_altitude_airless_topo;
+    const moonAlt = d.moon_altitude_airy_topo ?? d.moon_altitude_apparent_airless_topo;
+    if ([sunAz, moonAz, sunAlt, moonAlt].some((v) => v == null || isNaN(v))) { host.innerHTML = ""; return; }
+
+    const W = 560, H = 260, padL = 44, padR = 16, padT = 14, padB = 30;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    // rentang azimuth: ±4° di sekitar titik tengah Matahari/Bulan
+    const azMid = (sunAz + moonAz) / 2;
+    const azHalf = Math.max(2.2, Math.abs(sunAz - moonAz) / 2 + 1.5);
+    const azMin = azMid - azHalf, azMax = azMid + azHalf;
+    // rentang tinggi: dari sedikit di bawah min sampai +5°
+    const altLo = Math.min(-2, sunAlt, moonAlt) - 1;
+    const altHi = Math.max(5, sunAlt, moonAlt) + 1;
+    const X = (az) => padL + ((az - azMin) / (azMax - azMin)) * plotW;
+    const Y = (alt) => padT + (1 - (alt - altLo) / (altHi - altLo)) * plotH;
+
+    // grid tinggi tiap 1°
+    let grid = "";
+    for (let a = Math.ceil(altLo); a <= Math.floor(altHi); a++) {
+      const yy = Y(a);
+      const horizon = a === 0;
+      grid += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${horizon ? "#0ea5e9" : "#e5e7eb"}" stroke-width="${horizon ? 1.6 : 0.7}"/>`;
+      grid += `<text x="${padL - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="#94a3b8">${a}°</text>`;
+    }
+    // grid azimuth tiap 1°
+    for (let a = Math.ceil(azMin); a <= Math.floor(azMax); a++) {
+      const xx = X(a);
+      grid += `<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${H - padB}" stroke="#f1f5f9" stroke-width="0.7"/>`;
+      grid += `<text x="${xx}" y="${H - padB + 12}" text-anchor="middle" font-size="9" fill="#94a3b8">${a}°</text>`;
+    }
+
+    const sdMoon = (d.moon_semidiameter_deg || 0.25);
+    const sx = X(sunAz), sy = Y(sunAlt), mx = X(moonAz), my = Y(moonAlt);
+    const rMoonPx = Math.max(4, Math.abs(Y(moonAlt) - Y(moonAlt + sdMoon)));
+
+    const svg = `
+    <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-width:420px">
+      <rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="#fafafa"/>
+      ${grid}
+      <!-- area di bawah ufuk -->
+      <rect x="${padL}" y="${Y(0)}" width="${plotW}" height="${Math.max(0, H - padB - Y(0))}" fill="#0ea5e9" opacity="0.06"/>
+      <!-- Matahari -->
+      <circle cx="${sx}" cy="${sy}" r="7" fill="#f59e0b" stroke="#b45309"/>
+      <text x="${sx}" y="${sy - 10}" text-anchor="middle" font-size="10" fill="#b45309">Matahari</text>
+      <!-- Bulan -->
+      <circle cx="${mx}" cy="${my}" r="${rMoonPx}" fill="#e2e8f0" stroke="#64748b"/>
+      <text x="${mx}" y="${my - rMoonPx - 4}" text-anchor="middle" font-size="10" fill="#475569">Bulan</text>
+      <text x="${(padL + W - padR) / 2}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#94a3b8">Azimuth (° dari Utara) — ufuk barat</text>
+    </svg>`;
+    host.innerHTML = svg;
+    if (cap) cap.innerHTML =
+      `Matahari: tinggi ${dms(sunAlt)}, azimuth ${dms(sunAz)} · Bulan: tinggi ${dms(moonAlt)}, azimuth ${dms(moonAz)} · ` +
+      `beda tinggi (ARCV) ${dms(moonAlt - sunAlt)}, beda azimuth (DAZ) ${dms(moonAz - sunAz)}.`;
+  }
+
   // ---------- tabel ephemeris penuh ----------
+  function gt(row, fmt) { return [fmt(row.geo), fmt(row.topo)]; }
   function gt(row, fmt) { return [fmt(row.geo), fmt(row.topo)]; }
   // Tabel DATA HILAL lengkap (meniru Al Falak DPUA) — konsumsi DetailedEphemeris.
   function diffDMS(g, t) { return (g == null || t == null || isNaN(g) || isNaN(t)) ? "" : dms(t - g); }
@@ -469,10 +535,165 @@
       renderSummary(data.ephemeris);
       renderMoon(data.ephemeris);
       if (lastDetailed) renderEphemeris(lastDetailed);
+      renderHorizon(lastDetailed);
       renderCriteria(data.criteria, data.criteria_detailed);
       resultsEl.classList.remove("hidden");
+      saveHistory(fd, body);
     } catch (err) {
       setStatus("error", "Tidak bisa menghubungi backend: " + err.message);
     }
   });
+
+  // ═══════════════════ Lokasi: GPS, favorit, riwayat ═══════════════════
+  const favStore = window.lsList("alfalak_fav_locations", 30);
+  const histStore = window.lsList("alfalak_hilal_history", 20);
+
+  function fillLocation({ name, country, lat, lon, tz, elevation }) {
+    if (name != null) form.loc_name.value = name;
+    if (country != null) form.country.value = country;
+    if (lat != null) form.latitude.value = lat;
+    if (lon != null) form.longitude.value = lon;
+    if (tz != null) form.timezone.value = tz;
+    if (elevation != null) form.elevation.value = elevation;
+  }
+
+  // GPS
+  const btnGPS = document.getElementById("btn-gps");
+  if (btnGPS) btnGPS.addEventListener("click", async () => {
+    setLoading(btnGPS, true);
+    try {
+      const { lat, lon } = await window.getGeolocation();
+      form.latitude.value = lat.toFixed(4);
+      form.longitude.value = lon.toFixed(4);
+      // estimasi zona waktu dari bujur (pembulatan 15°/jam) bila kosong
+      if (!form.timezone.value) form.timezone.value = Math.round(lon / 15);
+      window.toast("Lokasi perangkat terisi", "success");
+    } catch (e) {
+      window.toast("Tidak bisa ambil lokasi: " + (e.message || "ditolak"), "error");
+    } finally { setLoading(btnGPS, false); }
+  });
+
+  // Favorit: simpan + pilih
+  const favSelect = document.getElementById("fav-select");
+  function renderFavorites() {
+    const favs = favStore.all();
+    if (!favSelect) return;
+    favSelect.classList.toggle("hidden", favs.length === 0);
+    favSelect.innerHTML = '<option value="">★ Lokasi favorit…</option>' +
+      favs.map((f, i) => `<option value="${i}">${(f.name || "Tanpa nama")} (${(+f.lat).toFixed(2)}, ${(+f.lon).toFixed(2)})</option>`).join("");
+  }
+  if (favSelect) favSelect.addEventListener("change", () => {
+    const i = parseInt(favSelect.value, 10);
+    if (isNaN(i)) return;
+    fillLocation(favStore.all()[i]);
+    favSelect.value = "";
+    window.toast("Lokasi favorit dimuat", "info");
+  });
+  const btnFavSave = document.getElementById("btn-fav-save");
+  if (btnFavSave) btnFavSave.addEventListener("click", () => {
+    const fd = new FormData(form);
+    const lat = parseFloat(fd.get("latitude")), lon = parseFloat(fd.get("longitude"));
+    if (isNaN(lat) || isNaN(lon)) { window.toast("Isi lintang & bujur dulu", "warning"); return; }
+    const fav = {
+      name: (fd.get("loc_name") || "").trim() || `(${lat.toFixed(2)}, ${lon.toFixed(2)})`,
+      country: (fd.get("country") || "").trim(),
+      lat, lon, tz: parseFloat(fd.get("timezone")) || 0, elevation: parseFloat(fd.get("elevation")) || 0,
+    };
+    favStore.add(fav, "name");
+    renderFavorites();
+    window.toast(`Favorit disimpan: ${fav.name}`, "success");
+  });
+
+  // Riwayat
+  function saveHistory(fd, body) {
+    const item = {
+      ts: new Date().toISOString(),
+      name: (fd.get("loc_name") || "").trim() || `(${body.latitude.toFixed(2)}, ${body.longitude.toFixed(2)})`,
+      lat: body.latitude, lon: body.longitude, tz: body.timezone, elevation: body.elevation,
+      temperature: body.temperature, pressure: body.pressure,
+      year: body.year, month: body.month, day: body.day, engine: engineMode,
+    };
+    histStore.add(item);
+    renderHistory();
+  }
+  function renderHistory() {
+    const list = histStore.all();
+    const card = document.getElementById("history-card");
+    const host = document.getElementById("history-list");
+    if (!card || !host) return;
+    card.classList.toggle("hidden", list.length === 0);
+    host.innerHTML = list.map((h, i) =>
+      `<button type="button" class="btn btn-xs btn-outline" data-hi="${i}" title="${new Date(h.ts).toLocaleString("id-ID")}">${h.name} · ${h.day}/${h.month}/${h.year}</button>`).join("");
+    host.querySelectorAll("button[data-hi]").forEach((b) => b.addEventListener("click", () => {
+      const h = histStore.all()[parseInt(b.dataset.hi, 10)];
+      if (!h) return;
+      fillLocation(h);
+      form.year.value = h.year; form.month.value = h.month; form.day.value = Math.round(h.day);
+      if (form.temperature) form.temperature.value = h.temperature || 10;
+      if (form.pressure) form.pressure.value = h.pressure || 1010;
+      if (h.engine && typeof setEngine === "function") setEngine(h.engine);
+      // pastikan mode Masehi
+      if (calMode === "hijri" && btnGreg) btnGreg.click();
+      form.requestSubmit();
+    }));
+  }
+  const histClear = document.getElementById("history-clear");
+  if (histClear) histClear.addEventListener("click", async () => {
+    const ok = await window.confirmDialog({ title: "Hapus riwayat?", body: "Hapus semua riwayat perhitungan di perangkat ini?", confirmLabel: "Hapus", danger: true });
+    if (ok) { histStore.clear(); renderHistory(); window.toast("Riwayat dihapus", "info"); }
+  });
+
+  renderFavorites();
+  renderHistory();
+
+  // ═══════════════════ Ekspor PDF, salin, tautan ═══════════════════
+  const btnPDF = document.getElementById("btn-pdf");
+  if (btnPDF) btnPDF.addEventListener("click", () => {
+    if (!lastData) return;
+    const L = lastData.location, D = lastData.date;
+    const tbl = document.getElementById("ephemeris-rows");
+    const engine = (lastDetailed && lastDetailed.engine) || "Classic (Meeus)";
+    const html = `
+      <h1 style="font-size:18px">DATA HILAL — Al Falak DPUA</h1>
+      <p style="font-size:12px;margin:2px 0">Lokasi: ${escapeHtml(form.loc_name.value || "")} (${L.latitude}, ${L.longitude}) · elev ${L.elevation} m · UTC${L.timezone >= 0 ? "+" : ""}${L.timezone}</p>
+      <p style="font-size:12px;margin:2px 0">Tanggal: ${D.day}/${D.month}/${D.year} · Metode: ${engine}</p>
+      <table><thead><tr><th>No</th><th>Parameter</th><th>Geosentrik</th><th>Toposentrik</th><th>Selisih</th></tr></thead>
+      <tbody>${tbl ? tbl.innerHTML : ""}</tbody></table>`;
+    window.printArea(html, "DATA HILAL");
+  });
+
+  const btnCopy = document.getElementById("btn-copy");
+  if (btnCopy) btnCopy.addEventListener("click", () => {
+    if (!lastData) return;
+    window.copyToClipboard(buildText(lastData), "Ringkasan disalin");
+  });
+
+  const btnShare = document.getElementById("btn-share");
+  if (btnShare) btnShare.addEventListener("click", () => {
+    const fd = new FormData(form);
+    const p = new URLSearchParams({
+      lat: fd.get("latitude"), lon: fd.get("longitude"), elev: fd.get("elevation"),
+      tz: fd.get("timezone"), y: fd.get("year"), m: fd.get("month"), d: fd.get("day"),
+      name: fd.get("loc_name") || "", engine: engineMode,
+    });
+    const url = location.origin + location.pathname + "?" + p.toString();
+    window.copyToClipboard(url, "Tautan hasil disalin");
+  });
+
+  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+  // ═══════════════════ Muat dari URL (share link) ═══════════════════
+  (function loadFromURL() {
+    const q = new URLSearchParams(location.search);
+    if (!q.has("lat") || !q.has("lon")) return;
+    fillLocation({
+      name: q.get("name") || "", lat: q.get("lat"), lon: q.get("lon"),
+      tz: q.get("tz"), elevation: q.get("elev"),
+    });
+    if (q.get("y")) form.year.value = q.get("y");
+    if (q.get("m")) form.month.value = q.get("m");
+    if (q.get("d")) form.day.value = q.get("d");
+    if (q.get("engine") && typeof setEngine === "function") setEngine(q.get("engine"));
+    setTimeout(() => form.requestSubmit(), 100);
+  })();
 })();

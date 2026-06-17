@@ -93,3 +93,137 @@ window.setLoading = function (btn, on) {
   style.textContent = css;
   document.head.appendChild(style);
 })();
+
+// ───────────────────────── Toast notifikasi ─────────────────────────
+// toast(msg, kind) — kind: "success" | "error" | "warning" | "info".
+// Muncul di kanan-bawah, auto-hilang. Pengganti alert() yang lebih halus.
+(function injectToastHost() {
+  if (document.getElementById("toast-host")) return;
+  const host = document.createElement("div");
+  host.id = "toast-host";
+  host.className = "toast toast-end toast-bottom z-50";
+  document.addEventListener("DOMContentLoaded", () => document.body.appendChild(host));
+  // jika DOM sudah siap saat skrip dimuat:
+  if (document.body) document.body.appendChild(host);
+})();
+
+window.toast = function (msg, kind = "info", ms = 3200) {
+  let host = document.getElementById("toast-host");
+  if (!host) { host = document.createElement("div"); host.id = "toast-host"; host.className = "toast toast-end toast-bottom z-50"; document.body.appendChild(host); }
+  const cls = { success: "alert-success", error: "alert-error", warning: "alert-warning", info: "alert-info" }[kind] || "alert-info";
+  const ic = { success: window.icons.check, error: window.icons.x, warning: "", info: "" }[kind] || "";
+  const el = document.createElement("div");
+  el.className = `alert ${cls} shadow-lg text-sm py-2 px-3`;
+  el.setAttribute("role", "status");
+  el.innerHTML = `${ic}<span>${msg}</span>`;
+  host.appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .3s"; setTimeout(() => el.remove(), 300); }, ms);
+};
+
+// ───────────────────────── Modal konfirmasi ─────────────────────────
+// confirmDialog({title, body, confirmLabel, danger}) → Promise<boolean>.
+// Pengganti window.confirm() — bertema, dapat menandai aksi destruktif.
+window.confirmDialog = function (opts = {}) {
+  const { title = "Konfirmasi", body = "Lanjutkan?", confirmLabel = "Ya", cancelLabel = "Batal", danger = false } = opts;
+  return new Promise((resolve) => {
+    const dlg = document.createElement("dialog");
+    dlg.className = "modal";
+    dlg.innerHTML = `
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">${title}</h3>
+        <p class="py-3 text-sm">${body}</p>
+        <div class="modal-action">
+          <button class="btn btn-sm" data-act="cancel">${cancelLabel}</button>
+          <button class="btn btn-sm ${danger ? "btn-error" : "btn-primary"}" data-act="ok">${confirmLabel}</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button data-act="cancel">close</button></form>`;
+    document.body.appendChild(dlg);
+    const done = (val) => { dlg.close(); dlg.remove(); resolve(val); };
+    dlg.querySelector('[data-act="ok"]').addEventListener("click", () => done(true));
+    dlg.querySelectorAll('[data-act="cancel"]').forEach((b) => b.addEventListener("click", () => done(false)));
+    dlg.addEventListener("cancel", () => done(false));
+    dlg.showModal();
+  });
+};
+
+// ───────────────────────── Salin ke clipboard ─────────────────────────
+window.copyToClipboard = async function (text, okMsg = "Disalin ke papan klip") {
+  try {
+    await navigator.clipboard.writeText(text);
+    window.toast(okMsg, "success");
+  } catch (_) {
+    // fallback untuk konteks non-secure
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); window.toast(okMsg, "success"); }
+    catch (e) { window.toast("Gagal menyalin", "error"); }
+    ta.remove();
+  }
+};
+
+// ───────────────────── Cetak/PDF area tertentu ─────────────────────
+// printArea(html, title) — buka jendela cetak berisi `html`, mewarisi
+// daisyUI/Tailwind via CDN agar tabel rapi; pengguna pilih "Save as PDF".
+window.printArea = function (innerHTML, title = "Cetak") {
+  const w = window.open("", "_blank", "width=900,height=1000");
+  if (!w) { window.toast("Popup diblokir browser", "error"); return; }
+  w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8">
+    <title>${title}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @media print { @page { margin: 14mm; } .no-print { display:none !important; } }
+      body { font-family: ui-sans-serif, system-ui, sans-serif; color:#1f2937; }
+      table { width:100%; border-collapse: collapse; font-size: 11px; }
+      th, td { border:1px solid #d1d5db; padding:3px 6px; }
+      thead th { background:#f3f4f6; }
+      h1,h2 { margin: 0 0 6px; }
+    </style></head><body class="p-2">
+    ${innerHTML}
+    <div class="no-print mt-6 text-center">
+      <button onclick="window.print()" style="padding:8px 16px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;cursor:pointer">Cetak / Simpan PDF</button>
+    </div>
+    <script>window.onload=()=>setTimeout(()=>window.print(),350)<\/script>
+    </body></html>`);
+  w.document.close();
+};
+
+// ───────────────── Penyimpanan lokal: riwayat & favorit ─────────────────
+// store(key) → objek {all, add, remove, clear} untuk daftar di localStorage.
+window.lsList = function (key, max = 50) {
+  const read = () => { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch (_) { return []; } };
+  const write = (arr) => { try { localStorage.setItem(key, JSON.stringify(arr.slice(0, max))); } catch (_) {} };
+  return {
+    all: read,
+    add(item, dedupeKey) {
+      let arr = read();
+      if (dedupeKey) arr = arr.filter((x) => x[dedupeKey] !== item[dedupeKey]);
+      arr.unshift(item);
+      write(arr);
+      return arr;
+    },
+    removeAt(i) { const arr = read(); arr.splice(i, 1); write(arr); return arr; },
+    remove(pred) { const arr = read().filter((x) => !pred(x)); write(arr); return arr; },
+    clear() { write([]); },
+  };
+};
+
+// ───────────────────────── Geolokasi browser ─────────────────────────
+// getGeolocation() → Promise<{lat, lon}>; reject bila ditolak/tak didukung.
+window.getGeolocation = function () {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("Browser tak mendukung geolokasi"));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+};
+
+// debounce util kecil untuk input pencarian.
+window.debounce = function (fn, ms = 250) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+};

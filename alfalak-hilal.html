@@ -25,6 +25,11 @@
             <input list="city-list" id="city-search" class="input input-bordered input-sm" placeholder="Ketik nama kota: Jakarta, Mekkah, London…" autocomplete="off">
             <datalist id="city-list"></datalist>
           </label>
+          <div class="sm:col-span-2 flex flex-wrap gap-2 -mt-1">
+            <button type="button" id="btn-gps" class="btn btn-xs btn-outline" title="Isi lintang/bujur dari lokasi perangkat">📍 Lokasi Saya</button>
+            <button type="button" id="btn-fav-save" class="btn btn-xs btn-outline" title="Simpan lokasi ini sebagai favorit">★ Simpan Favorit</button>
+            <select id="fav-select" class="select select-bordered select-xs hidden" title="Pilih lokasi favorit" aria-label="Lokasi favorit"></select>
+          </div>
           <label class="form-control"><span class="label-text">Nama lokasi</span>
             <input type="text" name="loc_name" class="input input-bordered input-sm" placeholder="IIAC Pelabuhan Ratu"></label>
           <label class="form-control"><span class="label-text">Negara</span>
@@ -78,14 +83,25 @@
       </div>
     </form>
 
+    <!-- Riwayat perhitungan (lokal, di perangkat ini) -->
+    <div id="history-card" class="card bg-base-100 shadow p-4 hidden no-print">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="card-title text-base">Riwayat Perhitungan</h2>
+        <button type="button" id="history-clear" class="btn btn-ghost btn-xs">Hapus semua</button>
+      </div>
+      <div id="history-list" class="flex flex-wrap gap-2"></div>
+    </div>
+
     <div id="status" class="hidden"></div>
 
     <div id="results" class="hidden space-y-6">
       <!-- Toolbar export -->
       <div class="flex flex-wrap gap-2 no-print">
+        <button type="button" id="btn-pdf" class="btn btn-sm btn-primary btn-outline">Cetak / PDF</button>
         <button type="button" id="btn-txt" class="btn btn-sm btn-outline">Simpan TXT</button>
         <button type="button" id="btn-csv" class="btn btn-sm btn-outline">Simpan CSV</button>
-        <button type="button" id="btn-print" class="btn btn-sm btn-outline" onclick="window.print()">Cetak</button>
+        <button type="button" id="btn-copy" class="btn btn-sm btn-outline">Salin Ringkasan</button>
+        <button type="button" id="btn-share" class="btn btn-sm btn-outline">Salin Tautan</button>
       </div>
 
       <!-- PENILAIAN VISIBILITAS (banner menonjol, ala desktop) -->
@@ -118,6 +134,13 @@
           <div id="moon-viz"></div>
           <div id="moon-viz-caption" class="text-xs text-base-content/60 mt-2 text-center"></div>
         </div>
+      </div>
+
+      <!-- Diagram ufuk: posisi Matahari & Bulan saat magrib -->
+      <div class="card bg-base-100 shadow p-4">
+        <h2 class="card-title text-base mb-2">Diagram Ufuk Barat (saat Matahari terbenam)</h2>
+        <div id="horizon-viz" class="w-full overflow-x-auto"></div>
+        <div id="horizon-caption" class="text-xs text-base-content/60 mt-2"></div>
       </div>
 
       <!-- Tabel ephemeris penuh (DATA HILAL — meniru Al Falak DPUA) -->
