@@ -558,9 +558,8 @@
       temperature: parseFloat(fd.get("temperature")) || 0,
       pressure: parseFloat(fd.get("pressure")) || 0,
     };
-    const post = (path, b) => fetch(window.API_BASE + path, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b),
-    });
+    // fetchAPI menyertakan token (endpoint perhitungan butuh login + approved).
+    const post = (path, b) => fetchAPI(path, { method: "POST", body: JSON.stringify(b) });
     try {
       // hilal → ringkasan/kriteria ; ephemeris → tabel detail lengkap (per engine)
       const [res, ephRes] = await Promise.all([

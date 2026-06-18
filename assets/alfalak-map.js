@@ -113,9 +113,9 @@
       deg_per_cell: 2.0,
     };
     try {
-      const res = await fetch(window.API_BASE + "/api/alfalak/map", {
+      // fetchAPI menyertakan token (endpoint perhitungan butuh login + approved).
+      const res = await fetchAPI("/api/alfalak/map", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
