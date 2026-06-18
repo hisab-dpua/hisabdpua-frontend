@@ -140,3 +140,20 @@ h1, h2, h3 { letter-spacing: -0.02em; }
   .hover-lift:hover { transform: none; }
 }
 .card { border-radius: 1rem; }
+
+/* ═══════════════ Responsif / anti-overflow mobile ═══════════════ */
+
+/* Cegah scroll horizontal seluruh halaman (elemen lebar harus pakai
+   container .overflow-x-auto sendiri, bukan memaksa body melebar). */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* Di layar kecil, perkecil padding kartu & ukuran tabel agar muat. */
+@media (max-width: 640px) {
+  .card { border-radius: 0.75rem; }
+  .table :where(th, td) { padding-left: 0.4rem; padding-right: 0.4rem; }
+  /* Judul besar jangan terlalu memakan tinggi di mobile. */
+  h1.text-3xl { font-size: 1.5rem; line-height: 2rem; }
+}
+
+/* Input/elemen form tidak meluap dari kartu. */
+.input, .select, .textarea { max-width: 100%; }

@@ -13,39 +13,61 @@ window.icons = {
   theme: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>',
 };
 
-// mountNav menyuntik navbar konsisten ke elemen #app-nav.
-// active: "im" | "aniq" | "maghib" | "admin" | null. me: objek user (opsional).
-// Tiga metode ditampilkan setara sebagai entri navbar sejajar.
+// mountNav menyuntik navbar konsisten & RESPONSIF ke elemen #app-nav.
+// active: "im" | "aniq" | "maghib" | "alfalak" | "alfalak-map" | "admin" | null.
+// me: objek user (opsional). Di layar lebar menu tampil sejajar; di mobile
+// menu masuk ke dropdown hamburger agar tidak meluap.
 window.mountNav = function (active, me) {
   const root = document.getElementById("app-nav");
   if (!root) return;
-  const link = (key, href, label) =>
-    `<a href="${href}" class="btn btn-sm ${active === key ? "btn-active btn-ghost" : "btn-ghost"}">${label}</a>`;
-  const methods =
-    link("im", "hisab.html?method=im", "Irsyadul Murid") +
-    link("aniq", "hisab.html?method=aniq", "Ad-Durr al-Anīq") +
-    link("maghib", "maghib.html", "Maghīb al-Qamarain") +
-    link("alfalak", "alfalak-hilal.html", "Al Falak DPUA") +
-    link("alfalak-map", "alfalak-map.html", "Peta Hilal");
-  const adminLink = me && me.role === "admin" ? link("admin", "admin.html", "Admin") : "";
+
+  const items = [
+    ["im", "hisab.html?method=im", "Irsyadul Murid"],
+    ["aniq", "hisab.html?method=aniq", "Ad-Durr al-Anīq"],
+    ["maghib", "maghib.html", "Maghīb al-Qamarain"],
+    ["alfalak", "alfalak-hilal.html", "Al Falak DPUA"],
+    ["alfalak-map", "alfalak-map.html", "Peta Hilal"],
+  ];
+  if (me && me.role === "admin") items.push(["admin", "admin.html", "Admin"]);
+
+  // Menu inline (desktop): tombol-tombol sejajar.
+  const inline = items.map(([key, href, label]) =>
+    `<a href="${href}" class="btn btn-sm ${active === key ? "btn-active btn-ghost" : "btn-ghost"}">${label}</a>`
+  ).join("");
+  // Menu dropdown (mobile): daftar <li>.
+  const dropdownItems = items.map(([key, href, label]) =>
+    `<li><a href="${href}" class="${active === key ? "active" : ""}">${label}</a></li>`
+  ).join("");
+
   const themeBtn = `<button onclick="toggleTheme()" class="btn btn-sm btn-ghost btn-circle" title="Mode terang/gelap" aria-label="Ganti tema">${window.icons.theme}</button>`;
-  // Sisi kanan adaptif: login → sapaan + Logout; belum login → Masuk/Daftar.
   const authArea = me
-    ? `<span class="text-sm text-base-content/70 hidden sm:inline-flex items-center gap-1">${window.icons.user}${me.name}</span>
+    ? `<span class="text-sm text-base-content/70 hidden md:inline-flex items-center gap-1">${window.icons.user}${me.name}</span>
        <button onclick="logout()" class="btn btn-sm btn-ghost">Logout</button>`
     : `<a href="login.html" class="btn btn-sm btn-ghost">Masuk</a>
        <a href="register.html" class="btn btn-sm btn-primary">Daftar</a>`;
+
   root.outerHTML = `
-  <div class="navbar bg-base-100 shadow-sm sticky top-0 z-30 flex-wrap">
-    <div class="flex-1">
-      <a href="index.html" class="btn btn-ghost text-lg gap-2">
-        <img src="assets/logo-alfalak.png" alt="Al Falak DPUA" class="w-8 h-8 rounded">
+  <div class="navbar bg-base-100 shadow-sm sticky top-0 z-30 px-2 sm:px-4">
+    <div class="navbar-start">
+      <!-- Hamburger (mobile saja) -->
+      <div class="dropdown lg:hidden">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle" aria-label="Menu">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </div>
+        <ul tabindex="0" class="menu menu-sm dropdown-content mt-2 z-[60] p-2 shadow-lg bg-base-100 rounded-box w-60 gap-0.5">
+          ${dropdownItems}
+        </ul>
+      </div>
+      <a href="index.html" class="btn btn-ghost normal-case text-base sm:text-lg gap-2 px-1 sm:px-2">
+        <img src="assets/logo-alfalak.png" alt="Al Falak DPUA" class="w-7 h-7 sm:w-8 sm:h-8 rounded">
         <span class="font-bold">Al Falak DPUA</span>
       </a>
     </div>
-    <div class="flex-none gap-1 items-center flex-wrap justify-end">
-      ${methods}
-      ${adminLink}
+    <!-- Menu inline hanya di layar lebar -->
+    <div class="navbar-center hidden lg:flex">
+      <div class="flex items-center gap-1">${inline}</div>
+    </div>
+    <div class="navbar-end gap-1 items-center">
       ${themeBtn}
       ${authArea}
     </div>
