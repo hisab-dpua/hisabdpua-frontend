@@ -3,12 +3,7 @@
 // export TXT/CSV/print, pemilih kota, kalender Hijriah↔Masehi. Setara desktop.
 // Halaman publik; navbar di-mount graceful.
 (async function () {
-  try {
-    const meRes = await fetchAPI("/me");
-    mountNav("alfalak", meRes.ok ? await meRes.json() : null);
-  } catch (_) {
-    mountNav("alfalak", null);
-  }
+  mountNav("alfalak", await fetchMe());
 
   const form = document.getElementById("alfalak-hilal-form");
   const statusEl = document.getElementById("status");

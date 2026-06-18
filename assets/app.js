@@ -41,6 +41,28 @@ window.fetchAPI = async function (path, opts = {}) {
   return res;
 };
 
+// fetchMe: cek user yang sedang login TANPA efek samping redirect — untuk
+// navbar di HALAMAN PUBLIK (beranda, hilal, peta, dll). Kembalikan objek user
+// bila login & valid, atau null bila belum login / token kedaluwarsa.
+// Tanpa token tidak ada request (langsung null) agar tak memicu 401.
+window.fetchMe = async function () {
+  const tok = getToken();
+  if (!tok) return null;
+  try {
+    const res = await fetch(apiURL("/me"), {
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+      credentials: "include",
+    });
+    if (!res.ok) {
+      if (res.status === 401) clearToken(); // token basi → bersihkan, tapi JANGAN redirect
+      return null;
+    }
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+};
+
 window.logout = async function () {
   try {
     await fetchAPI("/logout", { method: "POST" });

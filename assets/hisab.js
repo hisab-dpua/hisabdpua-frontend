@@ -19,22 +19,14 @@
   }
   const activeMethod = (methodSel && methodSel.value) || "im"; // untuk active-state navbar
 
-  // Auth gate + navbar.
-  try {
-    const meRes = await fetchAPI("/me");
-    if (meRes.ok) {
-      const me = await meRes.json();
-      if (me.role !== "admin" && me.approval_status !== "approved") {
-        window.location.href = "pending-approval.html";
-        return;
-      }
-      mountNav(activeMethod, me);
-    } else {
-      mountNav(activeMethod, null);
-    }
-  } catch {
-    mountNav(activeMethod, null);
+  // Navbar (publik). fetchMe() tak memicu redirect untuk tamu yang belum login;
+  // hanya user login-tetapi-belum-disetujui yang diarahkan ke pending-approval.
+  const me = await fetchMe();
+  if (me && me.role !== "admin" && me.approval_status !== "approved") {
+    window.location.href = "pending-approval.html";
+    return;
   }
+  mountNav(activeMethod, me);
 
   // Saat metode diganti via dropdown, perbarui active-state di navbar.
   if (methodSel) {

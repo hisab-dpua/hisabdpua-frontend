@@ -1,12 +1,7 @@
 // alfalak-map.js — fetch /api/alfalak/map grid, gambar zona A–J di Leaflet via canvas.
 // Halaman publik; navbar di-mount graceful.
 (async function () {
-  try {
-    const meRes = await fetchAPI("/me");
-    mountNav("alfalak-map", meRes.ok ? await meRes.json() : null);
-  } catch (_) {
-    mountNav("alfalak-map", null);
-  }
+  mountNav("alfalak-map", await fetchMe());
 
   // Warna zona A–J — sama dengan desktop (map/color.rs VisibilityColors).
   const ZONE = {

@@ -12,22 +12,14 @@
   const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
     "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
 
-  // Auth gate + navbar.
-  try {
-    const meRes = await fetchAPI("/me");
-    if (meRes.ok) {
-      const me = await meRes.json();
-      if (me.role !== "admin" && me.approval_status !== "approved") {
-        window.location.href = "pending-approval.html";
-        return;
-      }
-      mountNav("maghib", me);
-    } else {
-      mountNav("maghib", null);
-    }
-  } catch {
-    mountNav("maghib", null);
+  // Navbar (publik). fetchMe() tak memicu redirect untuk tamu yang belum login;
+  // hanya user login-tetapi-belum-disetujui yang diarahkan ke pending-approval.
+  const me = await fetchMe();
+  if (me && me.role !== "admin" && me.approval_status !== "approved") {
+    window.location.href = "pending-approval.html";
+    return;
   }
+  mountNav("maghib", me);
 
   // Load kota.
   try {
