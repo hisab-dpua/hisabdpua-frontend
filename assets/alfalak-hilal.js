@@ -13,7 +13,7 @@
   let engineMode = "classic"; // classic | modern
 
   // ===== Pemilih kota dari database (GET /api/cities) — bisa di-CRUD admin =====
-  const cityMap = {}; // "Nama — Negara" → {name,country,lat,lon,tz,elevation}
+  const cityMap = {}; // "Nama — Negara" → {name,country,lat,lon,tz,elevation,temperature,pressure}
   (async function loadCities() {
     try {
       // Kota dari database (koleksi cities) via backend — bisa di-CRUD admin.
@@ -44,6 +44,10 @@
     form.longitude.value = c.lon;
     form.timezone.value = c.tz;
     form.elevation.value = c.elevation; // field DB: elevation (bukan elev)
+    // Suhu & tekanan dari data kota (rata-rata iklim + barometrik dari elevasi);
+    // bila kota belum punya, biarkan nilai default di form.
+    if (form.temperature && c.temperature > 0) form.temperature.value = c.temperature;
+    if (form.pressure && c.pressure > 0) form.pressure.value = c.pressure;
   });
 
   // ===== Toggle kalender Masehi ↔ Hijriah =====

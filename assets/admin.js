@@ -198,6 +198,7 @@
         <td><input class="input input-bordered input-xs w-24" data-field="lon" type="number" step="any" value="${c.lon}"></td>
         <td><input class="input input-bordered input-xs w-14" data-field="tz" type="number" step="any" value="${c.tz}"></td>
         <td><input class="input input-bordered input-xs w-20" data-field="elevation" type="number" step="any" value="${c.elevation ?? 0}"></td>
+        <td><input class="input input-bordered input-xs w-16" data-field="temperature" type="number" step="any" value="${c.temperature ?? 0}" title="Suhu rata-rata iklim (°C). Tekanan dihitung otomatis dari elevasi."></td>
         <td class="text-center"><input type="checkbox" class="checkbox checkbox-xs" data-field="is_default" ${c.is_default ? "checked" : ""}></td>
         <td class="text-right whitespace-nowrap">
           <button class="btn btn-success btn-xs" data-action="save">Simpan</button>
@@ -223,6 +224,8 @@
       lon: parseFloat(tr.querySelector('[data-field="lon"]').value),
       tz: parseFloat(tr.querySelector('[data-field="tz"]').value),
       elevation: parseFloat(tr.querySelector('[data-field="elevation"]').value || "0"),
+      temperature: parseFloat(tr.querySelector('[data-field="temperature"]').value || "0"),
+      // pressure dibiarkan kosong → backend hitung dari elevasi (barometrik).
       order: parseInt(tr.querySelector('[data-field="order"]').value, 10),
       is_default: tr.querySelector('[data-field="is_default"]').checked,
     };
@@ -264,6 +267,7 @@
       name: f.get("name").trim(), country: f.get("country").trim(),
       lat: parseFloat(f.get("lat")), lon: parseFloat(f.get("lon")),
       tz: parseFloat(f.get("tz")), elevation: parseFloat(f.get("elevation") || "0"),
+      temperature: parseFloat(f.get("temperature") || "0"), // pressure → backend dari elevasi
       order: parseInt(f.get("order") || "99", 10), is_default: f.get("is_default") === "on",
     };
     const btn = e.target.querySelector('button[type="submit"]');
@@ -284,12 +288,12 @@
     const list = filteredCities();
     if (!list.length) { toast("Tidak ada kota untuk diekspor", "warning"); return; }
     downloadCSV("kota.csv",
-      ["name", "country", "lat", "lon", "tz", "elevation", "order", "is_default"],
-      list.map((c) => [c.name, c.country || "", c.lat, c.lon, c.tz, c.elevation ?? 0, c.order, c.is_default]));
+      ["name", "country", "lat", "lon", "tz", "elevation", "temperature", "pressure", "order", "is_default"],
+      list.map((c) => [c.name, c.country || "", c.lat, c.lon, c.tz, c.elevation ?? 0, c.temperature ?? 0, c.pressure ?? 0, c.order, c.is_default]));
     toast(`${list.length} kota diekspor`, "success");
   });
 
-  // Impor CSV kota (header: name,country,lat,lon,tz,elevation,order,is_default).
+  // Impor CSV kota (header: name,country,lat,lon,tz,elevation[,temperature,pressure],order,is_default).
   $("#city-import").addEventListener("change", async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
@@ -299,11 +303,13 @@
     if (rows.length < 2) { toast("CSV kosong/tak valid", "error"); return; }
     const header = rows[0].map((h) => h.trim().toLowerCase());
     const idx = (k) => header.indexOf(k);
+    const numAt = (r, k) => (idx(k) >= 0 ? parseFloat(r[idx(k)]) || 0 : 0);
     const records = rows.slice(1).filter((r) => r.length && r[idx("name")]).map((r) => ({
       name: (r[idx("name")] || "").trim(),
       country: (r[idx("country")] || "").trim(),
       lat: parseFloat(r[idx("lat")]), lon: parseFloat(r[idx("lon")]),
       tz: parseFloat(r[idx("tz")]) || 0, elevation: parseFloat(r[idx("elevation")]) || 0,
+      temperature: numAt(r, "temperature"), pressure: numAt(r, "pressure"),
       order: parseInt(r[idx("order")], 10) || 99,
       is_default: /^(true|1|ya|yes)$/i.test((r[idx("is_default")] || "").trim()),
     }));
