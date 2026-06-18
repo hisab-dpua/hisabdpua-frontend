@@ -12,13 +12,9 @@
   const monthIDN = ["", "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
     "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"];
 
-  // Navbar (publik). fetchMe() tak memicu redirect untuk tamu yang belum login;
-  // hanya user login-tetapi-belum-disetujui yang diarahkan ke pending-approval.
-  const me = await fetchMe();
-  if (me && me.role !== "admin" && me.approval_status !== "approved") {
-    window.location.href = "pending-approval.html";
-    return;
-  }
+  // Perlu login + akun disetujui. Tamu → login; pending → pending-approval.
+  const me = await requireAuthPage();
+  if (!me) return;
   mountNav("maghib", me);
 
   // Load kota.

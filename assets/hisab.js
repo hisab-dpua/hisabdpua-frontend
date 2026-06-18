@@ -19,13 +19,9 @@
   }
   const activeMethod = (methodSel && methodSel.value) || "im"; // untuk active-state navbar
 
-  // Navbar (publik). fetchMe() tak memicu redirect untuk tamu yang belum login;
-  // hanya user login-tetapi-belum-disetujui yang diarahkan ke pending-approval.
-  const me = await fetchMe();
-  if (me && me.role !== "admin" && me.approval_status !== "approved") {
-    window.location.href = "pending-approval.html";
-    return;
-  }
+  // Perlu login + akun disetujui. Tamu → login; pending → pending-approval.
+  const me = await requireAuthPage();
+  if (!me) return;
   mountNav(activeMethod, me);
 
   // Saat metode diganti via dropdown, perbarui active-state di navbar.

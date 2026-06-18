@@ -1,9 +1,11 @@
 // alfalak-hilal.js — panggil /api/alfalak/hilal, tampilkan data LENGKAP:
 // ringkasan, visualisasi sabit, tabel ephemeris penuh (geo/topo), kriteria detail,
 // export TXT/CSV/print, pemilih kota, kalender Hijriah↔Masehi. Setara desktop.
-// Halaman publik; navbar di-mount graceful.
+// Perlu login + akun disetujui (gate di requireAuthPage).
 (async function () {
-  mountNav("alfalak", await fetchMe());
+  const me = await requireAuthPage();
+  if (!me) return; // sudah diarahkan ke login/pending
+  mountNav("alfalak", me);
 
   const form = document.getElementById("alfalak-hilal-form");
   const statusEl = document.getElementById("status");
